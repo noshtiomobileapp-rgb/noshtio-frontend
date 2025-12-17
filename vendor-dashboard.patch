@@ -1,0 +1,173 @@
+diff --git a/app/vendor/dashboard/page.tsx b/app/vendor/dashboard/page.tsx
+new file mode 100644
+index 0000000..e123abc
+--- /dev/null
++++ b/app/vendor/dashboard/page.tsx
+@@ -0,0 +1,195 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+
+// Type for Today Stats
+type Stats = {
+  ordersToday: number;
+  revenueToday: number;
+  scansToday: number;
+  menuItems: number;
+};
+
+// Type for Recent Orders
+type RecentOrder = {
+  orderId: string;
+  total: number;
+  status: "Pending" | "Completed" | "Canceled";
+};
+
+export default function VendorDashboardPage() {
+  const [businessName, setBusinessName] = useState("Your Business");
+  const [stats, setStats] = useState<Stats>({
+    ordersToday: 0,
+    revenueToday: 0,
+    scansToday: 0,
+    menuItems: 0,
+  });
+
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("vendor_token");
+    if (token) {
+      try {
+        const decoded = JSON.parse(atob(token.split(".")[1]));
+        setBusinessName(decoded.businessName || "Your Business");
+      } catch (e) {
+        console.warn("Invalid token format");
+      }
+    }
+
+    setStats({
+      ordersToday: 3,
+      revenueToday: 1540,
+      scansToday: 12,
+      menuItems: 22,
+    });
+
+    setRecentOrders([
+      { orderId: "2481", total: 540, status: "Pending" },
+      { orderId: "2479", total: 1080, status: "Completed" },
+      { orderId: "2478", total: 320, status: "Canceled" },
+    ]);
+  }, []);
+
+  return (
+    <div className="p-5 space-y-8">
+
+      <div>
+        <h1 className="text-2xl font-bold">{businessName}</h1>
+        <p className="text-gray-500 text-sm">Vendor Dashboard Overview</p>
+      </div>
+
+      <div className="flex gap-4 overflow-x-auto pb-2">
+        <div className="min-w-[140px] p-4 bg-white border rounded shadow-sm">
+          <div className="text-gray-500 text-sm">Orders Today</div>
+          <div className="text-2xl font-bold mt-1">{stats.ordersToday}</div>
+        </div>
+
+        <div className="min-w-[140px] p-4 bg-white border rounded shadow-sm">
+          <div className="text-gray-500 text-sm">Revenue Today</div>
+          <div className="text-2xl font-bold mt-1">₹{stats.revenueToday}</div>
+        </div>
+
+        <div className="min-w-[140px] p-4 bg-white border rounded shadow-sm">
+          <div className="text-gray-500 text-sm">QR Scans</div>
+          <div className="text-2xl font-bold mt-1">{stats.scansToday}</div>
+        </div>
+
+        <div className="min-w-[140px] p-4 bg-white border rounded shadow-sm">
+          <div className="text-gray-500 text-sm">Menu Items</div>
+          <div className="text-2xl font-bold mt-1">{stats.menuItems}</div>
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-xl font-semibold mb-3">Quick Actions</h2>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+
+          <a
+            href="/vendor/menu"
+            className="p-4 border rounded bg-white hover:bg-gray-50 transition text-center shadow-sm"
+          >
+            Manage Menu
+          </a>
+
+          <a
+            href="/vendor/menu/ocr-review"
+            className="p-4 border rounded bg-white hover:bg-gray-50 transition text-center shadow-sm"
+          >
+            OCR Extracts
+          </a>
+
+          <a
+            href="/vendor/qr/generator"
+            className="p-4 border rounded bg-white hover:bg-gray-50 transition text-center shadow-sm"
+          >
+            QR Generator
+          </a>
+
+          <a
+            href="/vendor/orders"
+            className="p-4 border rounded bg-white hover:bg-gray-50 transition text-center shadow-sm"
+          >
+            Orders
+          </a>
+
+          <a
+            href="/vendor/payments"
+            className="p-4 border rounded bg-white hover:bg-gray-50 transition text-center shadow-sm"
+          >
+            Payments
+          </a>
+
+          <a
+            href="/vendor/settings"
+            className="p-4 border rounded bg-white hover:bg-gray-50 transition text-center shadow-sm"
+          >
+            Settings
+          </a>
+
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-xl font-semibold mb-3">Recent Orders</h2>
+
+        <div className="space-y-3">
+          {recentOrders.map((order) => (
+            <div
+              key={order.orderId}
+              className="p-4 bg-white border rounded shadow-sm flex justify-between"
+            >
+              <div>
+                <div className="font-medium">#{order.orderId}</div>
+                <div className="text-gray-500 text-sm">₹{order.total}</div>
+              </div>
+
+              <div
+                className={`px-3 py-1 rounded text-sm ${
+                  order.status === "Completed"
+                    ? "bg-green-100 text-green-600"
+                    : order.status === "Pending"
+                    ? "bg-yellow-100 text-yellow-700"
+                    : "bg-red-100 text-red-600"
+                }`}
+              >
+                {order.status}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

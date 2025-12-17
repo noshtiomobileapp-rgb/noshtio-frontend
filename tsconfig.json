@@ -1,0 +1,50 @@
+{
+  "compilerOptions": {
+    /* ----------------------------------------------------
+       Core TypeScript
+       ---------------------------------------------------- */
+    "target": "esnext",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+
+    /* ----------------------------------------------------
+       Module & Resolution
+       ---------------------------------------------------- */
+    "module": "esnext",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+
+    /* ----------------------------------------------------
+       Vite Environment Typings
+       ---------------------------------------------------- */
+    "types": ["vite/client"],
+
+    /* ----------------------------------------------------
+       Path Aliases
+       ---------------------------------------------------- */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
+
+  /* ----------------------------------------------------
+     Files Included for Type Checking
+     ---------------------------------------------------- */
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/vite-env.d.ts"
+  ],
+
+  /* ----------------------------------------------------
+     Explicit Exclusions
+     ---------------------------------------------------- */
+  "exclude": ["node_modules"]
+}

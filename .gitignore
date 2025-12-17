@@ -1,0 +1,20 @@
+# dependencies
+node_modules
+
+# build output
+.next
+dist
+out
+coverage
+
+# env files
+.env
+.env.local
+.env.production
+
+# TypeScript
+tsconfig.tsbuildinfo
+
+# OS / editor
+.DS_Store
+.vscode

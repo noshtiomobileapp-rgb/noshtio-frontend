@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <h1>OCR Upload Test</h1>
+
+  <form id="form" enctype="multipart/form-data">
+    <input type="file" id="fileInput" name="file" />
+    <button type="button" onclick="upload()">Upload</button>
+  </form>
+
+  <pre id="output"></pre>
+
+  <script>
+    async function upload() {
+      const file = document.getElementById("fileInput").files[0];
+      const form = new FormData();
+      form.append("file", file);
+
+      const res = await fetch("/api/menu/upload", {
+        method: "POST",
+        body: form,
+      });
+
+      const data = await res.json();
+      document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+    }
+  </script>
+</body>
+</html>
