@@ -1,17 +1,39 @@
+/* ============================================================
+   MENU — FRONTEND API CONTRACT (MVP)
+   ============================================================ */
+
+export type ObjectId = string;
+
+/* -----------------------------
+   Public Menu Item (Customer)
+------------------------------ */
 export interface PublicMenuItemDTO {
-  id: string;
+  _id: ObjectId;
   name: string;
   price: number;
-  isAvailable: boolean;
 }
 
+/* -----------------------------
+   Public Menu Category (Customer)
+------------------------------ */
 export interface PublicMenuCategoryDTO {
-  id: string;
+  _id: ObjectId;
   name: string;
   items: PublicMenuItemDTO[];
 }
 
+/* -----------------------------
+   Public Menu Response (Customer)
+------------------------------ */
 export interface PublicMenuDTO {
-  restaurantId: string;
+  restaurantId: ObjectId;
   categories: PublicMenuCategoryDTO[];
+}
+
+/* -----------------------------
+   API Response Wrapper
+------------------------------ */
+export interface GetPublicMenuResponse {
+  success: true;
+  data: PublicMenuDTO;
 }
