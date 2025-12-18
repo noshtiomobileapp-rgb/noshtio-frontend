@@ -1,6 +1,7 @@
 "use client";
 
 import { useCartStore } from "@/store/cart-store";
+import { text, button } from "@/styles/tokens";
 
 type Item = {
   _id: string;
@@ -15,46 +16,50 @@ export default function ItemCard({ item }: { item: Item }) {
   const qty = useCartStore((s) => s.getQuantity(item._id));
 
   return (
-    <div className="border p-3 rounded flex justify-between items-center">
-      <div>
-        <p className="font-medium">{item.name}</p>
-        <p className="text-sm text-gray-600">₹{item.price}</p>
+    <div className="border rounded-md p-3 flex flex-col gap-2">
+      {/* Title + Price */}
+      <div className="flex justify-between items-center">
+        <span className={text.body}>{item.name}</span>
+        <span className={text.meta}>₹{item.price}</span>
       </div>
 
-      {qty === 0 ? (
-        <button
-          onClick={() =>
-            addItem({
-              itemId: item._id,
-              name: item.name,
-              price: item.price,
-            })
-          }
-          className="px-3 py-1 border rounded"
-        >
-          Add
-        </button>
-      ) : (
-        <div className="flex items-center gap-2">
+      {/* Action Row (fixed height to prevent jump) */}
+      <div className="flex justify-end min-h-[36px]">
+        {qty === 0 ? (
           <button
-            onClick={() => decrease(item._id)}
-            className="px-2 py-1 border rounded"
+            className={button.primary}
+            onClick={() =>
+              addItem({
+                itemId: item._id,
+                name: item.name,
+                price: item.price,
+              })
+            }
           >
-            –
+            Add
           </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <button
+              className={button.ghost}
+              onClick={() => decrease(item._id)}
+            >
+              −
+            </button>
 
-          <span className="min-w-[20px] text-center font-semibold">
-            {qty}
-          </span>
+            <span className="min-w-[20px] text-center font-medium">
+              {qty}
+            </span>
 
-          <button
-            onClick={() => increase(item._id)}
-            className="px-2 py-1 border rounded"
-          >
-            +
-          </button>
-        </div>
-      )}
+            <button
+              className={button.ghost}
+              onClick={() => increase(item._id)}
+            >
+              +
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
