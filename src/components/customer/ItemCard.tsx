@@ -16,18 +16,20 @@ export default function ItemCard({ item }: { item: Item }) {
   const qty = useCartStore((s) => s.getQuantity(item._id));
 
   return (
-    <div className="border rounded-md p-3 flex flex-col gap-2">
+    <div className="border rounded-md p-3 flex flex-col gap-2 bg-white">
       {/* Title + Price */}
       <div className="flex justify-between items-center">
-        <span className={text.body}>{item.name}</span>
+        <span className={`${text.body} font-semibold`}>
+          {item.name}
+        </span>
         <span className={text.meta}>₹{item.price}</span>
       </div>
 
       {/* Action Row (fixed height to prevent jump) */}
-      <div className="flex justify-end min-h-[36px]">
+      <div className="flex justify-end min-h-[44px]">
         {qty === 0 ? (
           <button
-            className={button.primary}
+            className={`${button.primary} min-h-[44px] active:bg-gray-800`}
             onClick={() =>
               addItem({
                 itemId: item._id,
@@ -41,7 +43,7 @@ export default function ItemCard({ item }: { item: Item }) {
         ) : (
           <div className="flex items-center gap-2">
             <button
-              className={button.ghost}
+              className={`${button.ghost} min-h-[44px] min-w-[44px] active:bg-gray-100 rounded-md`}
               onClick={() => decrease(item._id)}
             >
               −
@@ -52,7 +54,7 @@ export default function ItemCard({ item }: { item: Item }) {
             </span>
 
             <button
-              className={button.ghost}
+              className={`${button.ghost} min-h-[44px] min-w-[44px] active:bg-gray-100 rounded-md`}
               onClick={() => increase(item._id)}
             >
               +

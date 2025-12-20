@@ -23,7 +23,7 @@ export default function CartPage() {
 
   async function checkout() {
     if (!restaurantId || !sessionId) {
-      setError("Session not initialized. Please refresh and try again.");
+      setError("Something went wrong. Please try again.");
       return;
     }
 
@@ -40,11 +40,12 @@ export default function CartPage() {
         })),
       });
 
+      localStorage.setItem("lastOrderId", res.orderId);
       clearCart();
-      router.push(`/order/${res.orderId}`);
+      router.push(`/customer/status/${res.orderId}`);
     } catch (err) {
       console.error(err);
-      setError("Failed to place order. Please try again.");
+      setError("Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -91,7 +92,7 @@ export default function CartPage() {
         <button
           onClick={checkout}
           disabled={submitting}
-          className={`${button.primary} w-full`}
+          className={`${button.primary} w-full min-h-[44px]`}
         >
           {submitting
             ? "Placing Order..."
@@ -101,7 +102,7 @@ export default function CartPage() {
         <button
           onClick={clearCart}
           disabled={submitting}
-          className="w-full text-sm text-gray-600"
+          className={`${button.ghost} w-full`}
         >
           Clear cart
         </button>

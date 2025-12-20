@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useCartStore } from "@/store/cart-store";
+import { useRouter } from "next/router";
+import { useCartStore } from "../../store/cart-store";
 
 export default function CartBar() {
   const router = useRouter();

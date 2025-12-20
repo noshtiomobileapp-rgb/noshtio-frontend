@@ -27,7 +27,7 @@ export default function OrderConfirmationPage() {
 
       <button
         onClick={() => router.push(`/order/${orderId}/status`)}
-        className={`${button.primary} mt-4`}
+        className={`${button.ghost} mt-4`}
       >
         View order status
       </button>

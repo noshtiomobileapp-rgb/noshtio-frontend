@@ -1,41 +1,32 @@
+"use client";
+
 import { PublicMenuItemDTO } from "@/contracts/menu.contract";
-import { useCartStore } from "@/store";
+import { useCartStore } from "@/store/cart-store";
 
-type Props = {
-  item: PublicMenuItemDTO;
-};
-
-export function ItemCard({ item }: Props) {
-  const addItem = useCartStore((s) => s.addItem);
-  const increase = useCartStore((s) => s.increase);
-  const decrease = useCartStore((s) => s.decrease);
-  const quantity = useCartStore((s) => s.getQuantity(item.id));
+export function ItemCard({ item }: { item: PublicMenuItemDTO }) {
+  const qty = useCartStore((s) => s.getQuantity(item._id));
+  const add = useCartStore((s) => s.addItem);
 
   return (
-    <div>
-      <div>{item.name}</div>
-      <div>₹{item.price}</div>
+    <div
+      className={`border p-3 rounded flex justify-between ${
+        !item.available ? "opacity-50" : ""
+      }`}
+    >
+      <div>
+        <div className="font-medium">{item.name}</div>
+        <div className="text-sm">₹{item.price}</div>
+      </div>
 
-      {quantity === 0 ? (
-        <button
-          disabled={!item.isAvailable}
-          onClick={() =>
-            addItem({
-              id: item.id,
-              name: item.name,
-              price: item.price,
-            })
-          }
-        >
-          Add
-        </button>
-      ) : (
-        <div>
-          <button onClick={() => decrease(item.id)}>-</button>
-          <span>{quantity}</span>
-          <button onClick={() => increase(item.id)}>+</button>
-        </div>
-      )}
+      <button
+        disabled={!item.available}
+        onClick={() =>
+          add({ itemId: item._id, name: item.name, price: item.price })
+        }
+        className="px-3 py-1 bg-orange-500 text-white rounded disabled:bg-gray-300"
+      >
+        Add
+      </button>
     </div>
   );
 }

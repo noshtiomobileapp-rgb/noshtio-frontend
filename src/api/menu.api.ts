@@ -1,11 +1,25 @@
 import { http } from "./http";
 import { PublicMenuDTO } from "@/contracts/menu.contract";
 
-export const fetchPublicMenu = async (
+/* ============================================================
+   PUBLIC MENU API
+============================================================ */
+
+/**
+ * Canonical implementation
+ */
+export async function getPublicMenu(
   restaurantId: string
-): Promise<PublicMenuDTO> => {
-  const res = await http.get<PublicMenuDTO>(
-    `/menu/public/${restaurantId}`
-  );
-  return res.data;
-};
+): Promise<PublicMenuDTO> {
+  return http<PublicMenuDTO>({
+    method: "GET",
+    url: "/menu/public",
+    params: { restaurantId },
+  });
+}
+
+/**
+ * Backward-compatible alias
+ * (used by src/pages/menu.tsx)
+ */
+export const fetchPublicMenu = getPublicMenu;

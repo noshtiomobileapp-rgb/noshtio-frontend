@@ -11,6 +11,7 @@ export interface PublicMenuItemDTO {
   _id: ObjectId;
   name: string;
   price: number;
+  available: boolean; // ✅ REQUIRED (MVP-critical)
 }
 
 /* -----------------------------

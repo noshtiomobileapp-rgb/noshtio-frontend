@@ -1,50 +1,101 @@
+import { http } from "./http";
 import {
   CreateOrderResponse,
   GetOrderResponse,
 } from "@/contracts/order.contract";
 
+/* ============================================================
+   Shared Types
+============================================================ */
+
+export type OrderStatus =
+  | "NEW"
+  | "PREPARING"
+  | "READY"
+  | "COMPLETED";
+
+export type VendorOrderItem = {
+  name: string;
+  qty: number;
+};
+
+export type VendorOrder = {
+  id: string;
+  tableLabel?: string;
+  sessionId?: string;
+  createdAt: string;
+  status: OrderStatus;
+  items?: VendorOrderItem[];
+  instructions?: string;
+};
+
+/* ============================================================
+   CUSTOMER APIs
+============================================================ */
+
 /* ------------------------------------------------------------
    PLACE CUSTOMER ORDER
-   POST /api/customer/order
 ------------------------------------------------------------- */
 export async function placeCustomerOrder(payload: {
   restaurantId: string;
   sessionId: string;
   items: { itemId: string; qty: number }[];
 }): Promise<CreateOrderResponse> {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/customer/order`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }
-  );
-
-  if (!res.ok) {
-    throw new Error("Failed to place order");
-  }
-
-  return res.json();
+  return http<CreateOrderResponse>({
+    method: "POST",
+    url: "/customer/order",
+    data: payload,
+  });
 }
 
 /* ------------------------------------------------------------
    GET CUSTOMER ORDER (POLLING)
-   GET /api/customer/order/:orderId
 ------------------------------------------------------------- */
 export async function getCustomerOrder(
   orderId: string
 ): Promise<GetOrderResponse> {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/customer/order/${orderId}`,
-    {
-      cache: "no-store",
-    }
-  );
+  return http<GetOrderResponse>({
+    method: "GET",
+    url: `/customer/order/${orderId}`,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
 
-  if (!res.ok) {
-    throw new Error("Failed to fetch order");
-  }
+/* ============================================================
+   VENDOR APIs
+============================================================ */
 
-  return res.json();
+/* ------------------------------------------------------------
+   GET VENDOR ORDERS (POLLING)
+------------------------------------------------------------- */
+export function getVendorOrders(status: OrderStatus) {
+  return http<{ data: VendorOrder[] }>({
+    method: "GET",
+    url: `/vendor/orders?status=${status}`,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
+/* ------------------------------------------------------------
+   GET SINGLE VENDOR ORDER (DETAIL DRAWER)
+------------------------------------------------------------- */
+export function getVendorOrderById(orderId: string) {
+  return http<VendorOrder>({
+    method: "GET",
+    url: `/vendor/orders/${orderId}`,
+  });
+}
+
+/* ------------------------------------------------------------
+   UPDATE VENDOR ORDER STATUS
+------------------------------------------------------------- */
+export function updateVendorOrderStatus(
+  orderId: string,
+  status: OrderStatus
+) {
+  return http<{ success: boolean }>({
+    method: "PATCH",
+    url: `/vendor/orders/${orderId}/status`,
+    data: { status },
+  });
 }
