@@ -4,21 +4,19 @@ import { useEffect, useMemo, useState } from "react";
 import { getVendorOrders } from "@/api/order.api";
 
 /* ============================================================
-   Types (MVP-SAFE)
+   ANALYTICS-SAFE TYPES (MATCH API GUARANTEES)
    ============================================================ */
 
-type OrderItem = {
+type AnalyticsItem = {
   name: string;
   qty: number;
-  price: number;
-  categoryName?: string;
 };
 
-type VendorOrder = {
+type AnalyticsOrder = {
   id: string;
   createdAt: string;
   status: string;
-  items: OrderItem[];
+  items: AnalyticsItem[];
 };
 
 /* ============================================================
@@ -26,7 +24,6 @@ type VendorOrder = {
    ============================================================ */
 
 type TimeRange = 7 | 30;
-
 const TIME_RANGES: TimeRange[] = [7, 30];
 
 /* ============================================================
@@ -34,10 +31,10 @@ const TIME_RANGES: TimeRange[] = [7, 30];
    ============================================================ */
 
 function isWithinRange(date: string, days: number) {
-  const d = new Date(date);
-  const now = new Date();
-  const diff = now.getTime() - d.getTime();
-  return diff <= days * 24 * 60 * 60 * 1000;
+  return (
+    Date.now() - new Date(date).getTime() <=
+    days * 24 * 60 * 60 * 1000
+  );
 }
 
 function formatDate(date: string) {
@@ -49,21 +46,37 @@ function formatDate(date: string) {
    ============================================================ */
 
 export default function VendorAnalyticsPage() {
-  const [orders, setOrders] = useState<VendorOrder[]>([]);
+  const [orders, setOrders] = useState<AnalyticsOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<TimeRange>(7);
 
   /* ------------------------------------------------------------
-     Load Orders
+     Load Orders (NORMALIZE API → UI)
      ------------------------------------------------------------ */
 
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const res = await getVendorOrders(); // existing API
-      setOrders(res);
+
+      const res = await getVendorOrders("COMPLETED");
+
+      const normalized: AnalyticsOrder[] = res.data.map(
+        (order) => ({
+          id: order.id,
+          createdAt: order.createdAt,
+          status: order.status,
+          items:
+            order.items?.map((item) => ({
+              name: item.name,
+              qty: item.qty,
+            })) ?? [],
+        })
+      );
+
+      setOrders(normalized);
       setLoading(false);
     }
+
     load();
   }, []);
 
@@ -77,23 +90,14 @@ export default function VendorAnalyticsPage() {
   );
 
   /* ------------------------------------------------------------
-     Aggregations
+     Aggregations (MVP-SAFE)
      ------------------------------------------------------------ */
 
   const analytics = useMemo(() => {
-    let revenueTotal = 0;
-    let totalOrders = filteredOrders.length;
+    const totalOrders = filteredOrders.length;
+    let totalItems = 0;
 
-    const itemMap = new Map<
-      string,
-      { qty: number; revenue: number }
-    >();
-
-    const categoryMap = new Map<
-      string,
-      { qty: number; revenue: number }
-    >();
-
+    const itemMap = new Map<string, number>();
     const ordersPerDay = new Map<string, number>();
 
     for (const order of filteredOrders) {
@@ -101,44 +105,23 @@ export default function VendorAnalyticsPage() {
       ordersPerDay.set(day, (ordersPerDay.get(day) ?? 0) + 1);
 
       for (const item of order.items) {
-        const itemRevenue = item.qty * item.price;
-        revenueTotal += itemRevenue;
-
-        // Items
-        const i = itemMap.get(item.name) ?? {
-          qty: 0,
-          revenue: 0,
-        };
-        i.qty += item.qty;
-        i.revenue += itemRevenue;
-        itemMap.set(item.name, i);
-
-        // Categories
-        const cat = item.categoryName ?? "Uncategorized";
-        const c = categoryMap.get(cat) ?? {
-          qty: 0,
-          revenue: 0,
-        };
-        c.qty += item.qty;
-        c.revenue += itemRevenue;
-        categoryMap.set(cat, c);
+        totalItems += item.qty;
+        itemMap.set(
+          item.name,
+          (itemMap.get(item.name) ?? 0) + item.qty
+        );
       }
     }
 
     return {
-      revenueTotal,
       totalOrders,
-      avgOrderValue:
-        totalOrders === 0 ? 0 : revenueTotal / totalOrders,
+      avgItemsPerOrder:
+        totalOrders === 0 ? 0 : totalItems / totalOrders,
 
       topItems: Array.from(itemMap.entries())
-        .map(([name, v]) => ({ name, ...v }))
+        .map(([name, qty]) => ({ name, qty }))
         .sort((a, b) => b.qty - a.qty)
         .slice(0, 5),
-
-      categoryPerformance: Array.from(categoryMap.entries()).map(
-        ([category, v]) => ({ category, ...v })
-      ),
 
       ordersPerDay: Array.from(ordersPerDay.entries()).map(
         ([date, count]) => ({ date, count })
@@ -176,13 +159,12 @@ export default function VendorAnalyticsPage() {
         </div>
       </div>
 
-      {/* Revenue Summary */}
-      <div className="grid grid-cols-3 gap-3">
-        <Stat label="Revenue" value={`₹${analytics.revenueTotal}`} />
+      {/* Summary */}
+      <div className="grid grid-cols-2 gap-3">
         <Stat label="Orders" value={analytics.totalOrders} />
         <Stat
-          label="Avg Order"
-          value={`₹${analytics.avgOrderValue.toFixed(0)}`}
+          label="Avg Items / Order"
+          value={analytics.avgItemsPerOrder.toFixed(1)}
         />
       </div>
 
@@ -200,23 +182,10 @@ export default function VendorAnalyticsPage() {
       {/* Top Items */}
       <Section title="Top Selling Items">
         <Table
-          headers={["Item", "Qty", "Revenue"]}
+          headers={["Item", "Qty"]}
           rows={analytics.topItems.map((i) => [
             i.name,
             i.qty,
-            `₹${i.revenue}`,
-          ])}
-        />
-      </Section>
-
-      {/* Category Performance */}
-      <Section title="Category Performance">
-        <Table
-          headers={["Category", "Qty", "Revenue"]}
-          rows={analytics.categoryPerformance.map((c) => [
-            c.category,
-            c.qty,
-            `₹${c.revenue}`,
           ])}
         />
       </Section>

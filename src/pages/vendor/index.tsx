@@ -1,8 +1,19 @@
-export default function VendorOverviewPage() {
-  return (
-    <main className="p-4">
-      <h1 className="text-xl font-semibold">Overview</h1>
-      <p className="mt-2 text-gray-500">Coming soon</p>
-    </main>
-  );
+import { useEffect } from "react";
+import { useRouter } from "next/router";
+
+/**
+ * Vendor root entry point (MVP)
+ *
+ * Rule:
+ * Vendors must land on Orders, not Overview.
+ * Overview is secondary and can live at /vendor/overview later.
+ */
+export default function VendorIndexRedirect() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/vendor/orders");
+  }, [router]);
+
+  return null;
 }
