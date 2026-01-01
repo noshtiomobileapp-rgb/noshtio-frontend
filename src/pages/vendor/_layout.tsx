@@ -1,26 +1,31 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
-/* ------------------------------------------------------------------
-   Navigation Config (SINGLE SOURCE OF TRUTH)
-------------------------------------------------------------------- */
+/* ============================================================
+   Navigation Config
+============================================================ */
 
 const NAV_ITEMS = [
   { label: "Overview", path: "/vendor" },
   { label: "Orders", path: "/vendor/orders" },
   { label: "Menu", path: "/vendor/menu" },
-  { label: "Categories", path: "/vendor/categories" },
   { label: "Analytics", path: "/vendor/analytics" },
-  { label: "Sessions", path: "/vendor/sessions" },
-  { label: "Settings", path: "/vendor/settings" },
 ];
 
-/* ------------------------------------------------------------------
-   Layout Component
-------------------------------------------------------------------- */
+function getUserFromToken() {
+  if (typeof window === "undefined") return null;
+  const token = localStorage.getItem("token");
+  if (!token) return null;
+
+  try {
+    return JSON.parse(atob(token.split(".")[1]));
+  } catch {
+    return null;
+  }
+}
 
 export default function VendorLayout({
   children,
@@ -28,70 +33,91 @@ export default function VendorLayout({
   children: ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [ready, setReady] = useState(false);
+
+  function isActive(path: string) {
+    return (
+      pathname === path ||
+      (path !== "/vendor" && pathname.startsWith(path))
+    );
+  }
+
+  useEffect(() => {
+    const user = getUserFromToken();
+
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
+
+    if (user.role !== "VENDOR") {
+      router.replace("/unauthorized");
+      return;
+    }
+
+    if (!user.tenantId) {
+      router.replace("/login");
+      return;
+    }
+
+    setReady(true);
+  }, [router]);
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading dashboard…
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
-      {/* ============================================================
-          Sidebar (Desktop)
-      ============================================================ */}
-      <aside className="hidden md:flex md:w-64 bg-white border-r flex-col">
-        <div className="h-14 px-4 flex items-center font-semibold border-b">
-          Vendor Panel
-        </div>
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      <header className="sticky top-0 z-30 bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+          <span className="font-semibold text-lg">
+            Vendor Dashboard
+          </span>
 
-        <nav className="flex-1 p-2 space-y-1">
-          {NAV_ITEMS.map((item) => {
-            const active =
-              pathname === item.path ||
-              (item.path !== "/vendor" &&
-                pathname.startsWith(item.path));
-
-            return (
+          <nav className="hidden md:flex gap-6 text-sm">
+            {NAV_ITEMS.map((item) => (
               <Link
                 key={item.path}
                 href={item.path}
-                className={`block px-3 py-2 rounded text-sm font-medium ${
-                  active
-                    ? "bg-gray-100 text-black"
-                    : "text-gray-600 hover:bg-gray-50"
-                }`}
+                className={
+                  isActive(item.path)
+                    ? "text-blue-600 font-medium"
+                    : "text-gray-600 hover:text-gray-900"
+                }
               >
                 {item.label}
               </Link>
-            );
-          })}
-        </nav>
-      </aside>
+            ))}
+          </nav>
+        </div>
+      </header>
 
-      {/* ============================================================
-          Main Content
-      ============================================================ */}
-      <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-4">
         {children}
       </main>
 
-      {/* ============================================================
-          Bottom Navigation (Mobile)
-      ============================================================ */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around text-xs">
-        {NAV_ITEMS.map((item) => {
-          const active =
-            pathname === item.path ||
-            (item.path !== "/vendor" &&
-              pathname.startsWith(item.path));
-
-          return (
+      <nav className="md:hidden sticky bottom-0 border-t bg-white">
+        <div className="grid grid-cols-4 text-xs">
+          {NAV_ITEMS.map((item) => (
             <Link
               key={item.path}
               href={item.path}
-              className={`flex-1 py-2 text-center ${
-                active ? "text-black font-medium" : "text-gray-500"
-              }`}
+              className={
+                isActive(item.path)
+                  ? "py-2 text-center text-blue-600 font-medium"
+                  : "py-2 text-center text-gray-500"
+              }
             >
               {item.label}
             </Link>
-          );
-        })}
+          ))}
+        </div>
       </nav>
     </div>
   );

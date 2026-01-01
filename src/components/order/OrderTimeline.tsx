@@ -1,4 +1,4 @@
-import { ORDER_STEPS } from "./orderStatus";
+import { ORDER_STEPS } from "@/order/orderStatus";
 
 type Props = {
   currentStatus: string;

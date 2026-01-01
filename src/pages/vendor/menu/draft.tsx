@@ -5,220 +5,117 @@ import { useRouter } from "next/router";
 
 type DraftItem = {
   name: string;
-  price: number;
-  assignedCategory?: string;
-  approved?: boolean;
-  rejected?: boolean;
-
-  // STEP 4.3
-  isAvailable?: boolean;
+  price: number | null;
+  reviewStatus: "pending" | "approved" | "rejected";
+  rejectionReason?: string | null;
 };
 
 type DraftCategory = {
-  name: string;
+  category: string;
   items: DraftItem[];
 };
 
-type DraftSnapshot = {
-  snapshotId: string;
-  categories: DraftCategory[];
-};
-
-async function fetchDraft(snapshotId: string): Promise<DraftSnapshot> {
-  const res = await fetch(`/api/vendor/menu/draft/${snapshotId}`);
-  if (!res.ok) throw new Error("Failed to load draft menu");
-  return res.json();
-}
-
-async function commitDraft(
+async function reviewItem(
   snapshotId: string,
-  items: {
-    name: string;
-    price: number;
-    category: string;
-    isAvailable: boolean;
-  }[]
+  categoryIndex: number,
+  itemIndex: number,
+  status: "approved" | "rejected",
+  rejectionReason?: string
 ) {
-  const res = await fetch(`/api/vendor/menu/commit`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ snapshotId, approvedItems: items }),
-  });
-
-  if (!res.ok) throw new Error("Commit failed");
+  await fetch(
+    `/api/vendor/menu/draft/${snapshotId}/category/${categoryIndex}/item/${itemIndex}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status, rejectionReason }),
+    }
+  );
 }
 
 export default function DraftMenuPage() {
   const router = useRouter();
   const { snapshotId } = router.query;
-
-  const [draft, setDraft] = useState<DraftSnapshot | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const [categories, setCategories] = useState<DraftCategory[]>([]);
 
   useEffect(() => {
-    if (!snapshotId || typeof snapshotId !== "string") return;
-
-    fetchDraft(snapshotId)
-      .then(setDraft)
-      .finally(() => setLoading(false));
+    if (!snapshotId) return;
+    fetch(`/api/vendor/menu/draft/${snapshotId}`)
+      .then((r) => r.json())
+      .then((d) => setCategories(d.categories || []));
   }, [snapshotId]);
 
-  function updateItem(
-    catIdx: number,
-    itemIdx: number,
-    patch: Partial<DraftItem>
-  ) {
-    setDraft((prev) => {
-      if (!prev) return prev;
-      const copy = structuredClone(prev);
-      Object.assign(copy.categories[catIdx].items[itemIdx], patch);
-      return copy;
+  function updateStatus(ci: number, ii: number, status: DraftItem["reviewStatus"], reason?: string) {
+    setCategories((prev) => {
+      const next = [...prev];
+      next[ci].items[ii].reviewStatus = status;
+      next[ci].items[ii].rejectionReason = reason ?? null;
+      return next;
     });
   }
-
-  function bulkApprove() {
-    if (!draft) return;
-    setDraft({
-      ...draft,
-      categories: draft.categories.map((c) => ({
-        ...c,
-        items: c.items.map((i) => ({
-          ...i,
-          approved: true,
-          rejected: false,
-        })),
-      })),
-    });
-  }
-
-  async function commit() {
-    if (!draft) return;
-
-    const approved = draft.categories.flatMap((c) =>
-      c.items
-        .filter((i) => i.approved && i.assignedCategory)
-        .map((i) => ({
-          name: i.name,
-          price: i.price,
-          category: i.assignedCategory!,
-          isAvailable: i.isAvailable ?? true,
-        }))
-    );
-
-    if (approved.length === 0) {
-      alert("No approved items to commit");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      await commitDraft(draft.snapshotId, approved);
-      router.push("/vendor/menu");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  if (loading) return <div className="p-4">Loading draft…</div>;
-  if (!draft) return <div className="p-4">Draft not found</div>;
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-lg font-semibold">OCR Draft Review</h1>
-        <button
-          onClick={bulkApprove}
-          className="text-sm px-3 py-1 border rounded"
-        >
-          Bulk Approve
-        </button>
-      </div>
+    <div className="p-6 space-y-6">
+      <h1 className="text-xl font-semibold">Review Menu Draft</h1>
 
-      {draft.categories.map((cat, cIdx) => (
-        <div key={cat.name} className="border rounded p-3 space-y-2">
-          <h2 className="font-medium">{cat.name}</h2>
+      {categories.map((cat, ci) => (
+        <div key={ci} className="border rounded p-4 space-y-3">
+          <h2 className="font-medium text-lg">{cat.category}</h2>
 
-          {cat.items.map((item, iIdx) => (
-            <div
-              key={item.name}
-              className="flex items-center gap-2 text-sm"
-            >
-              <div className="flex-1">
-                {item.name} — ₹{item.price}
+          {cat.items.map((item, ii) => (
+            <div key={ii} className="flex justify-between items-center border p-2 rounded">
+              <div>
+                <div className="font-medium">{item.name}</div>
+                <div className="text-sm text-gray-600">
+                  {item.price ? `₹${item.price}` : "—"}
+                </div>
+                {item.reviewStatus === "rejected" && (
+                  <div className="text-xs text-red-600">
+                    {item.rejectionReason}
+                  </div>
+                )}
               </div>
 
-              <label className="flex items-center gap-1 text-xs">
-                <input
-                  type="checkbox"
-                  checked={item.isAvailable ?? true}
-                  onChange={(e) =>
-                    updateItem(cIdx, iIdx, {
-                      isAvailable: e.target.checked,
-                    })
-                  }
-                />
-                Available
-              </label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    reviewItem(snapshotId as string, ci, ii, "approved");
+                    updateStatus(ci, ii, "approved");
+                  }}
+                  className="px-3 py-1 bg-green-600 text-white rounded"
+                >
+                  Approve
+                </button>
 
-              <select
-                className="border rounded px-2 py-1"
-                value={item.assignedCategory ?? ""}
-                onChange={(e) =>
-                  updateItem(cIdx, iIdx, {
-                    assignedCategory: e.target.value,
-                  })
-                }
-              >
-                <option value="">Assign category</option>
-                {draft.categories.map((c) => (
-                  <option key={c.name} value={c.name}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                className={`px-2 py-1 border rounded ${
-                  item.approved ? "bg-green-100" : ""
-                }`}
-                onClick={() =>
-                  updateItem(cIdx, iIdx, {
-                    approved: true,
-                    rejected: false,
-                  })
-                }
-              >
-                Approve
-              </button>
-
-              <button
-                className={`px-2 py-1 border rounded ${
-                  item.rejected ? "bg-red-100" : ""
-                }`}
-                onClick={() =>
-                  updateItem(cIdx, iIdx, {
-                    rejected: true,
-                    approved: false,
-                  })
-                }
-              >
-                Reject
-              </button>
+                <button
+                  onClick={() => {
+                    const reason = prompt("Rejection reason?");
+                    if (!reason) return;
+                    reviewItem(snapshotId as string, ci, ii, "rejected", reason);
+                    updateStatus(ci, ii, "rejected", reason);
+                  }}
+                  className="px-3 py-1 bg-red-600 text-white rounded"
+                >
+                  Reject
+                </button>
+              </div>
             </div>
           ))}
         </div>
       ))}
 
-      <div className="pt-4">
-        <button
-          disabled={submitting}
-          onClick={commit}
-          className="w-full bg-black text-white py-2 rounded"
-        >
-          Commit Approved Items
-        </button>
-      </div>
+      <button
+        onClick={async () => {
+          await fetch("/api/vendor/menu/commit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ snapshotId }),
+          });
+          router.push("/vendor/menu/published");
+        }}
+        className="w-full bg-black text-white py-2 rounded"
+      >
+        Publish Approved Items
+      </button>
     </div>
   );
 }
