@@ -17,6 +17,18 @@ type AnalyticsSummary = {
 };
 
 /* ============================================================
+   ENV (FAIL FAST IN PROD)
+============================================================ */
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+if (!API_BASE) {
+  throw new Error(
+    "NEXT_PUBLIC_API_BASE_URL is not defined. Check Vercel environment variables."
+  );
+}
+
+/* ============================================================
    PAGE
 ============================================================ */
 
@@ -42,25 +54,32 @@ export default function VendorDashboardPage() {
 
     async function load() {
       try {
+        setLoading(true);
+        setError("");
+
         const token = localStorage.getItem("token");
         if (!token) {
           window.location.replace("/vendor/login");
           return;
         }
 
+        const headers = {
+          Authorization: `Bearer ${token}`,
+        };
+
         const [vendorRes, analyticsRes] = await Promise.all([
-          fetch("http://localhost:4000/api/vendor/me", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch("http://localhost:4000/api/vendor/analytics/summary", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
+          fetch(`${API_BASE}/api/vendor/me`, { headers }),
+          fetch(`${API_BASE}/api/vendor/analytics/summary`, { headers }),
         ]);
 
         if (vendorRes.status === 401 || analyticsRes.status === 401) {
           localStorage.removeItem("token");
           window.location.replace("/vendor/login");
           return;
+        }
+
+        if (!vendorRes.ok || !analyticsRes.ok) {
+          throw new Error("Failed to load dashboard data");
         }
 
         const vendorData = await vendorRes.json();
@@ -84,6 +103,7 @@ export default function VendorDashboardPage() {
     }
 
     load();
+
     return () => {
       cancelled = true;
     };
@@ -119,20 +139,14 @@ export default function VendorDashboardPage() {
     summary.menuCount === 0;
 
   /* ============================================================
-     MAIN VIEW (INSIDE VENDOR LAYOUT)
+     MAIN VIEW
   ============================================================ */
 
   return (
-    <VendorLayout
-      vendor={vendor}
-      active={active}
-      onNavigate={setActive}
-    >
+    <VendorLayout vendor={vendor} active={active} onNavigate={setActive}>
       {isEmpty ? (
         <div className="border border-dashed border-neutral-300 rounded-lg p-10 text-center bg-white">
-          <h2 className="text-lg font-medium mb-2">
-            No activity yet
-          </h2>
+          <h2 className="text-lg font-medium mb-2">No activity yet</h2>
           <p className="text-sm text-neutral-600">
             Add your menu to start receiving orders.
           </p>
