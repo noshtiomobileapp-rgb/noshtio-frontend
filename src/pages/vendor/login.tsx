@@ -1,6 +1,5 @@
-"use client";
-
 import { useState } from "react";
+import Head from "next/head";
 import { loginVendor } from "@/api/auth";
 
 export default function VendorLoginPage() {
@@ -10,50 +9,59 @@ export default function VendorLoginPage() {
   const [error, setError] = useState("");
 
   async function handleLogin() {
+    if (!email || !password) {
+      setError("Email and password are required");
+      return;
+    }
+
     try {
       setLoading(true);
       setError("");
 
-      const { token } = await loginVendor(email, password);
+      const { token } = await loginVendor(email.trim(), password.trim());
 
-      // 🔒 REQUIRED FOR MIDDLEWARE
-      document.cookie = `token=${token}; path=/; max-age=86400`;
-
-      // Optional client-side usage
       localStorage.setItem("token", token);
 
-      // Hard redirect to trigger middleware
+      // HARD redirect to reset app state
       window.location.href = "/vendor/menu";
     } catch (err: any) {
-      setError(err?.message || "Login failed");
+      setError(err.message || "Login failed");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div style={{ padding: 40, maxWidth: 400 }}>
-      <h2>Vendor Login</h2>
+    <>
+      <Head>
+        <title>Vendor Login | Noshtio</title>
+      </Head>
 
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
+      <div style={{ maxWidth: 420, margin: "80px auto" }}>
+        <h2>Vendor Login</h2>
 
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          disabled={loading}
+        />
 
-      <button onClick={handleLogin} disabled={loading}>
-        {loading ? "Logging in..." : "Login"}
-      </button>
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          disabled={loading}
+        />
 
-      {error && <div style={{ color: "red" }}>{error}</div>}
-    </div>
+        <button onClick={handleLogin} disabled={loading}>
+          {loading ? "Logging in..." : "Login"}
+        </button>
+
+        {error && <div style={{ color: "red" }}>{error}</div>}
+      </div>
+    </>
   );
 }

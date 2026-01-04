@@ -2,36 +2,26 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { vendorFetch } from "@/lib/vendorApi";
+
 import MenuUploader from "@/components/vendor/menu/MenuUploader";
+import MenuList from "@/components/vendor/menu/MenuList";
+
+import {
+  getCurrentMenuSnapshot,
+  type MenuSnapshot,
+} from "@/api/vendorMenu";
 
 /* ============================================================
-   TYPES (STEP-SAFE)
-============================================================ */
-
-type MenuItem = {
-  _id: string;
-  name: string;
-  price: number | null;
-};
-
-type MenuSnapshot = {
-  snapshotId: string;
-  items: MenuItem[];
-  status: "DRAFT";
-};
-
-/* ============================================================
-   PAGE — VENDOR MENU (UPLOAD STEP)
+   PAGE — VENDOR MENU (UPLOAD VISIBILITY)
 ============================================================ */
 
 export default function VendorMenuPage() {
   const [loading, setLoading] = useState(true);
   const [snapshot, setSnapshot] = useState<MenuSnapshot | null>(null);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
 
   /* ============================================================
-     AUTH GUARD (PAGE-LEVEL)
+     AUTH GUARD
   ============================================================ */
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -41,7 +31,7 @@ export default function VendorMenuPage() {
   }, []);
 
   /* ============================================================
-     LOAD CURRENT DRAFT SNAPSHOT
+     LOAD CURRENT SNAPSHOT
   ============================================================ */
   useEffect(() => {
     let cancelled = false;
@@ -51,22 +41,10 @@ export default function VendorMenuPage() {
         setLoading(true);
         setError("");
 
-        const res = await vendorFetch<any>(
-          "/api/vendor/menu/current"
-        );
-
+        const data = await getCurrentMenuSnapshot();
         if (cancelled) return;
 
-        if (res && res.snapshotId) {
-          setSnapshot({
-            snapshotId: res.snapshotId,
-            items: res.items || [],
-            status: "DRAFT",
-          });
-        } else {
-          // No snapshot exists yet
-          setSnapshot(null);
-        }
+        setSnapshot(data);
       } catch (err: any) {
         if (cancelled) return;
 
@@ -112,7 +90,7 @@ export default function VendorMenuPage() {
   return (
     <div className="space-y-6">
       {/* ========================================================
-         EMPTY STATE — UPLOAD ENTRY POINT (THIS STEP)
+         EMPTY STATE — UPLOAD ENTRY POINT
       ======================================================== */}
       {!snapshot && (
         <div className="border rounded p-6 space-y-3">
@@ -144,35 +122,12 @@ export default function VendorMenuPage() {
         <>
           <div className="flex items-center justify-between">
             <span className="text-sm">
-              Status:{" "}
-              <strong>Draft (Not Live)</strong>
+              Status: <strong>Draft (Not Live)</strong>
             </span>
           </div>
 
-          {/* ITEMS */}
-          {snapshot.items.length === 0 ? (
-            <div className="text-sm text-gray-600">
-              No items extracted yet.
-            </div>
-          ) : (
-            <ul className="border rounded divide-y">
-              {snapshot.items.map((item) => (
-                <li
-                  key={item._id}
-                  className="p-3 flex justify-between text-sm"
-                >
-                  <span>{item.name}</span>
-                  <span>
-                    {item.price != null
-                      ? `₹${item.price}`
-                      : "—"}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+          <MenuList items={snapshot.items} />
 
-          {/* PREVIEW */}
           <Link
             href={`/vendor/menu/preview/${snapshot.snapshotId}`}
             className="inline-block text-blue-600 underline text-sm"

@@ -1,7 +1,7 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 if (!API_BASE) {
-  throw new Error("NEXT_PUBLIC_API_BASE is not defined");
+  throw new Error("NEXT_PUBLIC_API_BASE_URL is not defined");
 }
 
 type LoginResponse = {
@@ -16,19 +16,11 @@ export async function loginVendor(
 ): Promise<{ token: string }> {
   const res = await fetch(`${API_BASE}/api/auth/login`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
 
-  let data: LoginResponse;
-
-  try {
-    data = await res.json();
-  } catch {
-    throw new Error("Invalid auth response");
-  }
+  const data: LoginResponse = await res.json();
 
   if (!res.ok || !data.success || !data.token) {
     throw new Error(data.message || "Login failed");

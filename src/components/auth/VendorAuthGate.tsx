@@ -12,15 +12,12 @@ export default function VendorAuthGate({
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
-      window.location.replace("/vendor/login");
+      window.location.href = "/vendor/login";
       return;
     }
     setAllowed(true);
   }, []);
 
-  if (!allowed) {
-    return null; // ⛔ nothing inside executes
-  }
-
+  if (!allowed) return null;
   return <>{children}</>;
 }
