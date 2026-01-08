@@ -2,22 +2,31 @@
 
 import { useEffect, useState } from "react";
 
+/* ============================================================
+   VENDOR AUTH GATE (CLIENT-SIDE)
+============================================================ */
+
 export default function VendorAuthGate({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [allowed, setAllowed] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
+
     if (!token) {
-      window.location.href = "/vendor/login";
+      window.location.assign("/vendor/login");
       return;
     }
-    setAllowed(true);
+
+    setReady(true);
   }, []);
 
-  if (!allowed) return null;
+  if (!ready) {
+    return null;
+  }
+
   return <>{children}</>;
 }

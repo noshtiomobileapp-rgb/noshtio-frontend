@@ -9,23 +9,16 @@ export default function VendorLoginPage() {
   const [error, setError] = useState("");
 
   async function handleLogin() {
-    if (!email || !password) {
-      setError("Email and password are required");
-      return;
-    }
-
     try {
       setLoading(true);
       setError("");
 
-      const { token } = await loginVendor(email.trim(), password.trim());
+      await loginVendor(email.trim(), password.trim());
 
-      localStorage.setItem("token", token);
-
-      // HARD redirect to reset app state
-      window.location.href = "/vendor/menu";
+      // 🔒 OPTION B: Trust backend + middleware
+      window.location.replace("/vendor/menu");
     } catch (err: any) {
-      setError(err.message || "Login failed");
+      setError(err?.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -45,7 +38,6 @@ export default function VendorLoginPage() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          disabled={loading}
         />
 
         <input
@@ -53,7 +45,6 @@ export default function VendorLoginPage() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          disabled={loading}
         />
 
         <button onClick={handleLogin} disabled={loading}>

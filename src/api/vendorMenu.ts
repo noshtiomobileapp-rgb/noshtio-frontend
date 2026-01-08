@@ -1,4 +1,4 @@
-import { vendorFetch } from "@/lib/vendorApi";
+import { apiFetch } from "@/lib/api";
 
 /* ============================================================
    TYPES
@@ -20,8 +20,15 @@ export type MenuSnapshot = {
    API — CURRENT DRAFT SNAPSHOT
 ============================================================ */
 
+type CurrentMenuResponse = {
+  snapshotId?: string;
+  items?: MenuItem[];
+};
+
 export async function getCurrentMenuSnapshot(): Promise<MenuSnapshot | null> {
-  const res = await vendorFetch<any>("/api/vendor/menu/current");
+  const res = (await apiFetch(
+    "/api/vendor/menu/current"
+  )) as CurrentMenuResponse;
 
   if (!res || !res.snapshotId) {
     return null;

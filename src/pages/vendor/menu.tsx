@@ -12,28 +12,36 @@ import {
 } from "@/api/vendorMenu";
 
 /* ============================================================
-   PAGE — VENDOR MENU (UPLOAD VISIBILITY)
+   PAGE — VENDOR MENU (AUTH SAFE + MVP STABLE)
 ============================================================ */
 
 export default function VendorMenuPage() {
+  const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [snapshot, setSnapshot] = useState<MenuSnapshot | null>(null);
+  const [snapshot, setSnapshot] =
+    useState<MenuSnapshot | null>(null);
   const [error, setError] = useState("");
 
   /* ============================================================
-     AUTH GUARD
+     AUTH GUARD (CLIENT-ONLY, SINGLE SOURCE OF TRUTH)
   ============================================================ */
   useEffect(() => {
     const token = localStorage.getItem("token");
+
     if (!token) {
-      window.location.href = "/vendor/login";
+      window.location.assign("/vendor/login");
+      return;
     }
+
+    setReady(true);
   }, []);
 
   /* ============================================================
-     LOAD CURRENT SNAPSHOT
+     LOAD CURRENT MENU SNAPSHOT (AFTER AUTH)
   ============================================================ */
   useEffect(() => {
+    if (!ready) return;
+
     let cancelled = false;
 
     async function loadMenu() {
@@ -49,7 +57,8 @@ export default function VendorMenuPage() {
         if (cancelled) return;
 
         if (err?.message === "Unauthorized") {
-          window.location.href = "/vendor/login";
+          localStorage.removeItem("token");
+          window.location.assign("/vendor/login");
           return;
         }
 
@@ -62,14 +71,19 @@ export default function VendorMenuPage() {
     }
 
     loadMenu();
+
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [ready]);
 
   /* ============================================================
-     STATES
+     RENDER GUARDS
   ============================================================ */
+
+  if (!ready) {
+    return null; // ⛔ prevents premature execution
+  }
 
   if (loading) {
     return (
@@ -86,6 +100,10 @@ export default function VendorMenuPage() {
       </div>
     );
   }
+
+  /* ============================================================
+     MAIN VIEW
+  ============================================================ */
 
   return (
     <div className="space-y-6">
@@ -122,7 +140,8 @@ export default function VendorMenuPage() {
         <>
           <div className="flex items-center justify-between">
             <span className="text-sm">
-              Status: <strong>Draft (Not Live)</strong>
+              Status:{" "}
+              <strong>Draft (Not Live)</strong>
             </span>
           </div>
 
