@@ -1,25 +1,29 @@
-import { http } from "./http";
 import { PublicMenuDTO } from "@/contracts/menu.contract";
 
-/* ============================================================
-   PUBLIC MENU API
-============================================================ */
+/* -------------------------------------------------------
+   API
+------------------------------------------------------- */
+const API =
+  process.env.NEXT_PUBLIC_API_BASE || "http://localhost:4000/api";
 
-/**
- * Canonical implementation
- */
-export async function getPublicMenu(
+/* -------------------------------------------------------
+   Backend response shapes
+------------------------------------------------------- */
+export type PublicMenuApiResponse =
+  | PublicMenuDTO
+  | { success: boolean; menu: PublicMenuDTO };
+
+/* -------------------------------------------------------
+   Fetch public menu
+------------------------------------------------------- */
+export async function fetchPublicMenu(
   restaurantId: string
-): Promise<PublicMenuDTO> {
-  return http<PublicMenuDTO>({
-    method: "GET",
-    url: "/menu/public",
-    params: { restaurantId },
-  });
-}
+): Promise<PublicMenuApiResponse> {
+  const res = await fetch(`${API}/public/menu/${restaurantId}`);
 
-/**
- * Backward-compatible alias
- * (used by src/pages/menu.tsx)
- */
-export const fetchPublicMenu = getPublicMenu;
+  if (!res.ok) {
+    throw new Error("Failed to fetch public menu");
+  }
+
+  return res.json();
+}

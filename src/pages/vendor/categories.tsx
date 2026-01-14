@@ -6,6 +6,7 @@ import {
   createCategory,
   updateCategory,
   reorderCategories,
+  VendorCategory,
 } from "@/lib/http/vendor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,12 +20,11 @@ type Category = {
   name: string;
   isVisible: boolean;
   order: number;
-  itemCount: number; // MVP: defaulted to 0
+  itemCount: number;
 };
 
 /* ============================================================
    TEMP: Vendor ID (MVP)
-   Replace with auth/context post-MVP
 ============================================================ */
 
 const VENDOR_ID = "694166c34483971240f58595";
@@ -51,14 +51,14 @@ export default function VendorCategoriesPage() {
       const res = await getVendorCategories(VENDOR_ID);
 
       const normalized: Category[] = res.data
-        .map((c: any) => ({
-          id: c._id,                 // ✅ map backend _id
+        .map((c: VendorCategory) => ({
+          id: c._id,
           name: c.name,
           isVisible: c.isVisible ?? true,
           order: c.order ?? 0,
-          itemCount: 0,              // ✅ MVP default
+          itemCount: 0,
         }))
-        .sort((a: Category, b: Category) => a.order - b.order);
+        .sort((a, b) => a.order - b.order);
 
       setCategories(normalized);
     } catch (err) {
@@ -100,7 +100,9 @@ export default function VendorCategoriesPage() {
 
   async function renameCategory(id: string, name: string) {
     setCategories((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, name } : c))
+      prev.map((c) =>
+        c.id === id ? { ...c, name } : c
+      )
     );
 
     await updateCategory(id, { name });
@@ -110,7 +112,10 @@ export default function VendorCategoriesPage() {
      Toggle visibility
   ------------------------------------------------------------ */
 
-  async function toggleVisibility(id: string, isVisible: boolean) {
+  async function toggleVisibility(
+    id: string,
+    isVisible: boolean
+  ) {
     setCategories((prev) =>
       prev.map((c) =>
         c.id === id ? { ...c, isVisible } : c
@@ -124,12 +129,18 @@ export default function VendorCategoriesPage() {
      Reorder categories
   ------------------------------------------------------------ */
 
-  async function moveCategory(index: number, dir: -1 | 1) {
+  async function moveCategory(
+    index: number,
+    dir: -1 | 1
+  ) {
     const copy = [...categories];
     const target = index + dir;
     if (target < 0 || target >= copy.length) return;
 
-    [copy[index], copy[target]] = [copy[target], copy[index]];
+    [copy[index], copy[target]] = [
+      copy[target],
+      copy[index],
+    ];
 
     const reordered = copy.map((c, i) => ({
       ...c,
@@ -138,9 +149,16 @@ export default function VendorCategoriesPage() {
 
     setCategories(reordered);
 
-    await reorderCategories(
-      reordered.map((c) => c.id)
+    const payload: VendorCategory[] = reordered.map(
+      (c) => ({
+        _id: c.id,
+        name: c.name,
+        order: c.order,
+        isVisible: c.isVisible,
+      })
     );
+
+    await reorderCategories(payload);
   }
 
   /* ------------------------------------------------------------
@@ -149,16 +167,23 @@ export default function VendorCategoriesPage() {
 
   return (
     <div className="p-4 space-y-6">
-      <h1 className="text-lg font-semibold">Categories</h1>
+      <h1 className="text-lg font-semibold">
+        Categories
+      </h1>
 
       {/* Create */}
       <div className="flex gap-2">
         <Input
           placeholder="New category name"
           value={newName}
-          onChange={(e) => setNewName(e.target.value)}
+          onChange={(e) =>
+            setNewName(e.target.value)
+          }
         />
-        <Button onClick={handleCreate} disabled={loading}>
+        <Button
+          onClick={handleCreate}
+          disabled={loading}
+        >
           Add
         </Button>
       </div>
@@ -175,7 +200,10 @@ export default function VendorCategoriesPage() {
                 className="h-8"
                 value={c.name}
                 onChange={(e) =>
-                  renameCategory(c.id, e.target.value)
+                  renameCategory(
+                    c.id,
+                    e.target.value
+                  )
                 }
               />
               <span className="text-xs text-gray-500">
@@ -189,15 +217,21 @@ export default function VendorCategoriesPage() {
                 size="sm"
                 variant="outline"
                 disabled={i === 0}
-                onClick={() => moveCategory(i, -1)}
+                onClick={() =>
+                  moveCategory(i, -1)
+                }
               >
                 ↑
               </Button>
               <Button
                 size="sm"
                 variant="outline"
-                disabled={i === categories.length - 1}
-                onClick={() => moveCategory(i, 1)}
+                disabled={
+                  i === categories.length - 1
+                }
+                onClick={() =>
+                  moveCategory(i, 1)
+                }
               >
                 ↓
               </Button>
@@ -208,7 +242,10 @@ export default function VendorCategoriesPage() {
                   type="checkbox"
                   checked={c.isVisible}
                   onChange={(e) =>
-                    toggleVisibility(c.id, e.target.checked)
+                    toggleVisibility(
+                      c.id,
+                      e.target.checked
+                    )
                   }
                 />
                 Visible

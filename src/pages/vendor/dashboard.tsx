@@ -1,10 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
+
 import VendorLayout from "@/components/vendor/VendorLayout";
 import DashboardKpis from "@/components/vendor/dashboard/DashboardKpis";
 
-type NavKey = "dashboard" | "orders" | "menu" | "profile";
+import { apiGet } from "@/lib/apiClient";
+
+/* ============================================================
+   TYPES — API RESPONSES
+============================================================ */
+
+type VendorMe = {
+  _id: string;
+  name: string;
+  email: string;
+  role: "vendor";
+};
+
+type AnalyticsResponse = {
+  data: {
+    totalOrders: number;
+    totalRevenue: number;
+    menuCount: number;
+  };
+};
 
 type AnalyticsSummary = {
   totalOrders: number;
@@ -12,15 +33,14 @@ type AnalyticsSummary = {
   menuCount: number;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-if (!API_BASE) {
-  throw new Error("NEXT_PUBLIC_API_BASE_URL is missing");
-}
+/* ============================================================
+   PAGE — VENDOR DASHBOARD (COOKIE AUTH · SAFE)
+============================================================ */
 
 export default function VendorDashboardPage() {
-  const [active, setActive] = useState<NavKey>("dashboard");
-  const [vendor, setVendor] = useState<any>(null);
+  const router = useRouter();
+
+  const [vendor, setVendor] = useState<VendorMe | null>(null);
   const [summary, setSummary] = useState<AnalyticsSummary>({
     totalOrders: 0,
     totalRevenue: 0,
@@ -29,53 +49,77 @@ export default function VendorDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  /* ============================================================
+     LOAD VENDOR + ANALYTICS
+  ============================================================ */
   useEffect(() => {
-    async function load() {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        window.location.href = "/vendor/login";
-        return;
-      }
+    let cancelled = false;
 
+    async function loadDashboard() {
       try {
-        const headers = { Authorization: `Bearer ${token}` };
+        setLoading(true);
+        setError("");
 
-        const [meRes, analyticsRes] = await Promise.all([
-          fetch(`${API_BASE}/api/vendor/me`, { headers }),
-          fetch(`${API_BASE}/api/vendor/analytics/summary`, { headers }),
+        const [vendorRes, analyticsRes] = await Promise.all([
+          apiGet<VendorMe>("/api/vendor/me"),
+          apiGet<AnalyticsResponse>("/api/vendor/analytics/summary"),
         ]);
 
-        if (meRes.status === 401) {
-          localStorage.removeItem("token");
-          window.location.href = "/vendor/login";
+        if (cancelled) return;
+
+        setVendor(vendorRes);
+        setSummary({
+          totalOrders: Number(analyticsRes.data.totalOrders ?? 0),
+          totalRevenue: Number(analyticsRes.data.totalRevenue ?? 0),
+          menuCount: Number(analyticsRes.data.menuCount ?? 0),
+        });
+      } catch (err: any) {
+        if (cancelled) return;
+
+        if (err?.status === 401) {
+          router.replace("/vendor/login");
           return;
         }
 
-        const vendorData = await meRes.json();
-        const analyticsData = await analyticsRes.json();
-
-        setVendor(vendorData);
-        setSummary({
-          totalOrders: Number(analyticsData?.data?.totalOrders ?? 0),
-          totalRevenue: Number(analyticsData?.data?.totalRevenue ?? 0),
-          menuCount: Number(analyticsData?.data?.menuCount ?? 0),
-        });
-      } catch (err: any) {
-        setError(err.message || "Failed to load dashboard");
+        setError("Failed to load dashboard");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
-    load();
-  }, []);
+    loadDashboard();
 
-  if (loading) return <div>Loading dashboard…</div>;
-  if (error) return <div>{error}</div>;
-  if (!vendor) return null;
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
+  /* ============================================================
+     RENDER GUARDS
+  ============================================================ */
+
+  if (loading) {
+    return <div>Loading dashboard…</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-600">{error}</div>;
+  }
+
+  if (!vendor) {
+    return null;
+  }
+
+  /* ============================================================
+     MAIN VIEW
+  ============================================================ */
 
   return (
-    <VendorLayout vendor={vendor} active={active} onNavigate={setActive}>
+    <VendorLayout
+      vendor={vendor}
+      active="dashboard"
+      onNavigate={(key) => router.push(`/vendor/${key}`)}
+    >
       <DashboardKpis summary={summary} />
     </VendorLayout>
   );

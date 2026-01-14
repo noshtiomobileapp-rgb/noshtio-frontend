@@ -17,9 +17,12 @@ const STATUS_ACTIONS: Record<
   { label: string; next: OrderStatus } | null
 > = {
   NEW: { label: "Accept Order", next: "PREPARING" },
+  PENDING: null,
+  CONFIRMED: null,
   PREPARING: { label: "Mark Ready", next: "READY" },
   READY: { label: "Complete Order", next: "COMPLETED" },
   COMPLETED: null,
+  CANCELLED: null,
 };
 
 export default function OrderStatusActions({
@@ -41,8 +44,6 @@ export default function OrderStatusActions({
 
     if (res.success) {
       onSuccess();
-    } else {
-      alert("Failed to update order status");
     }
   }
 

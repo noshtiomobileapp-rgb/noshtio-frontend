@@ -1,8 +1,4 @@
-import { apiFetch } from "@/lib/api";
-
-/* ============================================================
-   TYPES
-============================================================ */
+import { apiClient } from "@/lib/apiClient";
 
 export type MenuItem = {
   _id: string;
@@ -16,27 +12,24 @@ export type MenuSnapshot = {
   status: "DRAFT";
 };
 
-/* ============================================================
-   API — CURRENT DRAFT SNAPSHOT
-============================================================ */
-
-type CurrentMenuResponse = {
-  snapshotId?: string;
-  items?: MenuItem[];
-};
-
 export async function getCurrentMenuSnapshot(): Promise<MenuSnapshot | null> {
-  const res = (await apiFetch(
-    "/api/vendor/menu/current"
-  )) as CurrentMenuResponse;
+  const data = await apiClient("/api/menu/current");
 
-  if (!res || !res.snapshotId) {
+  if (!data?.snapshotId) {
     return null;
   }
 
   return {
-    snapshotId: res.snapshotId,
-    items: res.items || [],
+    snapshotId: data.snapshotId,
+    items: data.items || [],
     status: "DRAFT",
   };
+}
+
+export async function uploadMenu(formData: FormData) {
+  return apiClient("/api/menu/upload", {
+    method: "POST",
+    body: formData,
+    skipJson: true,
+  });
 }

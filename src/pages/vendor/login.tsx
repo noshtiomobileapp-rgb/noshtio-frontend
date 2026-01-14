@@ -1,22 +1,37 @@
 import { useState } from "react";
 import Head from "next/head";
-import { loginVendor } from "@/api/auth";
+import { useRouter } from "next/router";
+import { apiClient } from "@/lib/apiClient";
 
 export default function VendorLoginPage() {
+  const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   async function handleLogin() {
+    if (!email || !password) {
+      setError("Email and password are required");
+      return;
+    }
+
     try {
       setLoading(true);
       setError("");
 
-      await loginVendor(email.trim(), password.trim());
+      await apiClient("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          email: email.trim(),
+          password: password.trim(),
+        }),
+      });
 
-      // 🔒 OPTION B: Trust backend + middleware
-      window.location.replace("/vendor/menu");
+      // ✅ Cookie-based auth established by backend
+      // ✅ One-way redirect only
+      router.replace("/vendor/menu");
     } catch (err: any) {
       setError(err?.message || "Login failed");
     } finally {
@@ -38,6 +53,7 @@ export default function VendorLoginPage() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
         />
 
         <input
@@ -45,13 +61,18 @@ export default function VendorLoginPage() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
         />
 
         <button onClick={handleLogin} disabled={loading}>
           {loading ? "Logging in..." : "Login"}
         </button>
 
-        {error && <div style={{ color: "red" }}>{error}</div>}
+        {error && (
+          <div style={{ color: "red", marginTop: 8 }}>
+            {error}
+          </div>
+        )}
       </div>
     </>
   );

@@ -1,68 +1,64 @@
 /* ============================================================
-   API CLIENT — OPTION B (COOKIE BASED) — FINAL
-   - Uses HttpOnly cookies
-   - No Authorization header
-   - Works in Local + Vercel Production
+   API CLIENT — COOKIE AUTH (CANONICAL · LOCKED)
 ============================================================ */
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-/**
- * Fail fast at build/runtime if env is misconfigured.
- * This prevents silent localhost fallbacks in production.
- */
 if (!API_BASE) {
-  throw new Error(
-    "NEXT_PUBLIC_API_BASE_URL is not defined. Check Vercel environment variables."
-  );
+  throw new Error("NEXT_PUBLIC_API_BASE_URL is not defined");
 }
 
-/* ============================================================
-   CORE FETCH WRAPPER
-============================================================ */
+export type ApiOptions = RequestInit & {
+  skipJson?: boolean;
+};
 
-async function apiFetch(
+export async function apiClient(
   path: string,
-  options: RequestInit = {}
-) {
+  options: ApiOptions = {}
+): Promise<any> {
+  const { skipJson, ...fetchOptions } = options;
+
+  const isFormData =
+    fetchOptions.body instanceof FormData;
+
+  const headers: Record<string, string> = {
+    ...(fetchOptions.headers as Record<string, string>),
+  };
+
+  if (!skipJson && !isFormData) {
+    headers["Content-Type"] = "application/json";
+  }
+
   const res = await fetch(`${API_BASE}${path}`, {
-    method: options.method ?? "GET",
-    credentials: "include", // 🔒 REQUIRED for cookie-based auth
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
-    body: options.body,
+    ...fetchOptions,
+    credentials: "include",
+    headers,
   });
 
   if (!res.ok) {
-    let errorMessage = "API request failed";
-
+    let message = `Request failed (${res.status})`;
     try {
-      errorMessage = await res.text();
-    } catch {
-      // ignore parse errors
-    }
-
-    throw new Error(errorMessage);
+      const text = await res.text();
+      if (text) message = text;
+    } catch {}
+    const err: any = new Error(message);
+    err.status = res.status;
+    throw err;
   }
 
+  if (res.status === 204) return null;
   return res.json();
 }
 
-/* ============================================================
-   PUBLIC API METHODS
-============================================================ */
-
-export function apiGet(path: string) {
-  return apiFetch(path, { method: "GET" });
+export async function apiGet<T>(path: string): Promise<T> {
+  return apiClient(path);
 }
 
-export function apiPost(
+export async function apiPost<T>(
   path: string,
   body: unknown
-) {
-  return apiFetch(path, {
+): Promise<T> {
+  return apiClient(path, {
     method: "POST",
     body: JSON.stringify(body),
   });

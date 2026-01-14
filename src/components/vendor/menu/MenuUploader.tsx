@@ -2,134 +2,78 @@
 
 import { useState } from "react";
 
-/* ============================================================
-   Types (EXISTING CONTRACT — LOCKED)
-============================================================ */
-
-type UploadState =
-  | "idle"
-  | "uploading"
-  | "success"
-  | "error";
-
-type MenuUploaderProps = {
-  /**
-   * REQUIRED BY EXISTING WORKFLOW
-   * Called after successful upload
-   * Used by parent to manage snapshot lifecycle
-   */
+type Props = {
   onUploaded: (snapshotId: string) => void;
 };
 
-/* ============================================================
-   Component
-============================================================ */
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000";
 
-export default function MenuUploader({
-  onUploaded,
-}: MenuUploaderProps) {
-  const [state, setState] = useState<UploadState>("idle");
-  const [error, setError] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string | null>(
-    null
-  );
+export default function MenuUploader({ onUploaded }: Props) {
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  async function handleUpload(file: File) {
-    setState("uploading");
-    setError(null);
-    setFileName(file.name);
+  async function handleUpload() {
+    if (!file) {
+      setError("Please select a file");
+      return;
+    }
 
     try {
-      const form = new FormData();
-      form.append("file", file);
+      setLoading(true);
+      setError("");
+
+      const formData = new FormData();
+      formData.append("menu", file);
 
       const res = await fetch(
-        "/api/vendor/menu/upload",
+        `${API_BASE}/api/vendor/menu/upload`,
         {
           method: "POST",
-          body: form,
+          body: formData,
+          credentials: "include",
         }
       );
 
       if (!res.ok) {
-        throw new Error(
-          "Menu upload failed. Please try again."
-        );
+        throw new Error("Upload failed");
       }
 
-      const json: {
-        snapshotId?: string;
-      } = await res.json();
+      const data = await res.json();
 
-      if (!json.snapshotId) {
-        throw new Error(
-          "Upload succeeded but snapshotId missing"
-        );
+      if (!data?.snapshotId) {
+        throw new Error("Invalid upload response");
       }
 
-      setState("success");
-
-      /**
-       * CRITICAL:
-       * Preserve snapshot-driven workflow
-       */
-      onUploaded(json.snapshotId);
-    } catch (err: any) {
-      setError(
-        err?.message ||
-          "Unexpected error during upload"
-      );
-      setState("error");
+      onUploaded(data.snapshotId);
+    } catch {
+      setError("Menu upload failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <div className="bg-white border rounded p-4 space-y-3">
-      <div className="font-medium">
-        Upload Menu
-      </div>
+    <div className="space-y-3">
+      <input
+        type="file"
+        accept="image/*,application/pdf"
+        onChange={(e) =>
+          setFile(e.target.files?.[0] || null)
+        }
+      />
 
-      {/* IDLE */}
-      {state === "idle" && (
-        <input
-          type="file"
-          accept=".pdf,.png,.jpg,.jpeg"
-          onChange={(e) =>
-            e.target.files &&
-            handleUpload(e.target.files[0])
-          }
-        />
-      )}
+      <button
+        onClick={handleUpload}
+        disabled={loading}
+        className="px-4 py-2 border rounded"
+      >
+        {loading ? "Uploading..." : "Upload Menu"}
+      </button>
 
-      {/* UPLOADING */}
-      {state === "uploading" && (
-        <div className="text-sm text-gray-600">
-          Uploading
-          {fileName ? ` "${fileName}"` : ""}…
-        </div>
-      )}
-
-      {/* SUCCESS */}
-      {state === "success" && (
-        <div className="text-green-600 text-sm">
-          Menu uploaded successfully.
-        </div>
-      )}
-
-      {/* ERROR */}
-      {state === "error" && (
-        <div className="text-red-600 text-sm space-y-1">
-          <div>{error}</div>
-          <button
-            className="underline"
-            onClick={() => {
-              setState("idle");
-              setError(null);
-            }}
-          >
-            Retry
-          </button>
-        </div>
+      {error && (
+        <div className="text-sm text-red-600">{error}</div>
       )}
     </div>
   );

@@ -3,27 +3,31 @@
     /* ----------------------------------------------------
        Core TypeScript
        ---------------------------------------------------- */
-    "target": "esnext",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "target": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "allowJs": false,
-    "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    "skipLibCheck": false,
 
     /* ----------------------------------------------------
        Module & Resolution
        ---------------------------------------------------- */
-    "module": "esnext",
-    "moduleResolution": "node",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
 
     /* ----------------------------------------------------
-       Next.js / Vite Environment Typings
+       Next.js Environment
        ---------------------------------------------------- */
-    "types": ["vite/client"],
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
 
     /* ----------------------------------------------------
        Path Aliases
@@ -33,21 +37,19 @@
       "@/*": ["src/*"]
     },
 
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ]
+    /* ----------------------------------------------------
+       Performance
+       ---------------------------------------------------- */
+    "incremental": true
   },
 
   /* ----------------------------------------------------
      Files Included for Type Checking
      ---------------------------------------------------- */
   "include": [
+    "next-env.d.ts",
     "src/**/*.ts",
     "src/**/*.tsx",
-    "src/vite-env.d.ts",
     ".next/types/**/*.ts"
   ],
 

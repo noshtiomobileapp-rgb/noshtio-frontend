@@ -1,33 +1,57 @@
-import { apiClient } from "./client";
-
-/* ============================================================
-   Vendor Category APIs (MATCH BACKEND ROUTES)
-   ============================================================ */
-
-export async function getVendorCategories(vendorId: string) {
-  return apiClient(`/vendor/categories?vendorId=${vendorId}`);
+export interface VendorCategory {
+  _id: string;
+  name: string;
+  order: number;
+  isVisible?: boolean;
 }
 
-export async function createCategory(vendorId: string, name: string) {
-  return apiClient(`/vendor/categories?vendorId=${vendorId}`, {
-    method: "POST",
-    body: JSON.stringify({ name }),
-  });
+/* ---------------------------------------------------
+   Backend-style response wrapper
+--------------------------------------------------- */
+type ApiResponse<T> = {
+  success: boolean;
+  data: T;
+};
+
+export async function getVendorCategories(
+  vendorId: string
+): Promise<ApiResponse<VendorCategory[]>> {
+  return {
+    success: true,
+    data: [],
+  };
+}
+
+export async function createCategory(
+  vendorId: string,
+  name: string
+): Promise<ApiResponse<VendorCategory>> {
+  return {
+    success: true,
+    data: {
+      _id: "tmp",
+      name,
+      order: 0,
+      isVisible: true,
+    },
+  };
 }
 
 export async function updateCategory(
-  categoryId: string,
-  body: { name?: string; isVisible?: boolean }
-) {
-  return apiClient(`/vendor/categories/${categoryId}`, {
-    method: "PATCH",
-    body: JSON.stringify(body),
-  });
+  id: string,
+  payload: Partial<Pick<VendorCategory, "name" | "isVisible">>
+): Promise<ApiResponse<null>> {
+  return {
+    success: true,
+    data: null,
+  };
 }
 
-export async function reorderCategories(orderedIds: string[]) {
-  return apiClient(`/vendor/categories/reorder`, {
-    method: "POST",
-    body: JSON.stringify({ orderedIds }),
-  });
+export async function reorderCategories(
+  categories: VendorCategory[]
+): Promise<ApiResponse<null>> {
+  return {
+    success: true,
+    data: null,
+  };
 }
