@@ -1,14 +1,12 @@
-export default function HomePage() {
-  return (
-    <main style={{ padding: 40 }}>
-      <h1>Noshtio</h1>
-      <p>Platform is live.</p>
+import { useEffect } from "react";
+import { useRouter } from "next/router";
 
-      <ul>
-        <li>
-          <a href="/login">Vendor Login</a>
-        </li>
-      </ul>
-    </main>
-  );
+export default function HomePage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/login");
+  }, [router]);
+
+  return null;
 }

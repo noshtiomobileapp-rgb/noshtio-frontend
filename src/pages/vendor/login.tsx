@@ -1,59 +1,65 @@
 import { useState } from "react";
-import Head from "next/head";
 import { useRouter } from "next/router";
-import { apiClient } from "@/lib/apiClient";
+import { apiFetch } from "@/lib/apiClient";
+
+type LoginResponse = {
+  success: boolean;
+  message?: string;
+  user?: {
+    id: string;
+    email: string;
+  };
+};
 
 export default function VendorLoginPage() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
-  async function handleLogin() {
-    if (!email || !password) {
-      setError("Email and password are required");
-      return;
-    }
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
 
     try {
-      setLoading(true);
-      setError("");
-
-      await apiClient("/api/auth/login", {
+      const res = await apiFetch("/api/auth/login", {
         method: "POST",
-        body: JSON.stringify({
-          email: email.trim(),
-          password: password.trim(),
-        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
       });
 
-      // ✅ Cookie-based auth established by backend
-      // ✅ One-way redirect only
-      router.replace("/vendor/menu");
-    } catch (err: any) {
-      setError(err?.message || "Login failed");
+      const data: LoginResponse = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Login failed");
+      }
+
+      // ✅ Login success
+      router.push("/vendor/dashboard");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <>
-      <Head>
-        <title>Vendor Login | Noshtio</title>
-      </Head>
+    <div style={{ maxWidth: 400, margin: "60px auto" }}>
+      <h1>Vendor Login</h1>
 
-      <div style={{ maxWidth: 420, margin: "80px auto" }}>
-        <h2>Vendor Login</h2>
-
+      <form onSubmit={handleSubmit}>
         <input
           type="email"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          autoComplete="email"
+          required
+          style={{ width: "100%", marginBottom: 12 }}
         />
 
         <input
@@ -61,19 +67,16 @@ export default function VendorLoginPage() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          autoComplete="current-password"
+          required
+          style={{ width: "100%", marginBottom: 12 }}
         />
 
-        <button onClick={handleLogin} disabled={loading}>
+        {error && <p style={{ color: "red" }}>{error}</p>}
+
+        <button type="submit" disabled={loading}>
           {loading ? "Logging in..." : "Login"}
         </button>
-
-        {error && (
-          <div style={{ color: "red", marginTop: 8 }}>
-            {error}
-          </div>
-        )}
-      </div>
-    </>
+      </form>
+    </div>
   );
 }

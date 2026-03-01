@@ -1,96 +1,72 @@
 "use client";
 
 import { useState } from "react";
-import { apiClient } from "@/lib/apiClient";
+import { apiPost } from "@/lib/apiClient";
 
 export default function MenuUpload({
   onUploaded,
 }: {
   onUploaded: (snapshotId: string) => void;
 }) {
-  const [file, setFile] = useState<File | null>(
-    null
-  );
+  const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleUpload(
-    e: React.FormEvent
-  ) {
+  async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
     if (!file) {
-      setError("Please select a file");
+      setError("Please select a file first");
       return;
     }
 
     try {
       setLoading(true);
-
       const formData = new FormData();
-      formData.append("menu", file);
+      // SYNCED: key "file" matches backend multer.single("file")
+      formData.append("file", file);
 
-      const res = await apiClient(
-        "/api/menu/upload",
-        {
-          method: "POST",
-          body: formData,
-          skipJson: true,
-        }
-      );
+      // apiPost automatically handles the headers and credentials
+      const res = await apiPost<any>("/api/vendor/menu/upload", formData);
 
-      if (!res.ok) {
-        const text = await res.text();
-        console.error(text);
-        setError("Upload failed");
-        return;
+      if (res && res.snapshotId) {
+        onUploaded(res.snapshotId);
+        setFile(null); // Clear after success
+      } else {
+        throw new Error("Invalid response from server");
       }
-
-      const data = await res.json();
-
-      if (!data.snapshotId) {
-        setError("Invalid server response");
-        return;
-      }
-
-      onUploaded(data.snapshotId);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("Unexpected error");
+      setError(err.message || "Failed to upload menu");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <form
-      onSubmit={handleUpload}
-      className="space-y-3"
-    >
-      <input
-        type="file"
-        accept="image/*,application/pdf"
-        onChange={(e) =>
-          setFile(
-            e.target.files?.[0] ?? null
-          )
-        }
-      />
+    <div className="bg-white p-4 rounded-lg border border-gray-200">
+      <form onSubmit={handleUpload} className="space-y-4">
+        <label className="block text-sm font-medium text-gray-700">
+          Upload Menu (.txt, .csv, image, or pdf)
+        </label>
+        <input
+          type="file"
+          accept=".txt,.csv,image/*,application/pdf"
+          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+        />
+        
+        {error && <p className="text-red-600 text-xs">{error}</p>}
 
-      {error && (
-        <p className="text-red-600 text-sm">
-          {error}
-        </p>
-      )}
-
-      <button
-        type="submit"
-        disabled={loading}
-        className="bg-black text-white px-4 py-2 rounded disabled:opacity-50"
-      >
-        {loading ? "Uploading…" : "Upload"}
-      </button>
-    </form>
+        <button
+          type="submit"
+          disabled={loading || !file}
+          className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+        >
+          {loading ? "Processing..." : "Upload Menu"}
+        </button>
+      </form>
+    </div>
   );
 }
