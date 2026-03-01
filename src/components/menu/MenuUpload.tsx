@@ -24,15 +24,16 @@ export default function MenuUpload({
     try {
       setLoading(true);
       const formData = new FormData();
-      // SYNCED: key "file" matches backend multer.single("file")
+
+      // Must match backend multer.single("file")
       formData.append("file", file);
 
-      // apiPost automatically handles the headers and credentials
-      const res = await apiPost<any>("/api/vendor/menu/upload", formData);
+      // ❌ Removed <any> generic (this caused Render build failure)
+      const res = await apiPost("/api/vendor/menu/upload", formData);
 
       if (res && res.snapshotId) {
         onUploaded(res.snapshotId);
-        setFile(null); // Clear after success
+        setFile(null);
       } else {
         throw new Error("Invalid response from server");
       }
@@ -50,13 +51,14 @@ export default function MenuUpload({
         <label className="block text-sm font-medium text-gray-700">
           Upload Menu (.txt, .csv, image, or pdf)
         </label>
+
         <input
           type="file"
           accept=".txt,.csv,image/*,application/pdf"
           className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         />
-        
+
         {error && <p className="text-red-600 text-xs">{error}</p>}
 
         <button
