@@ -23,15 +23,14 @@ export default function VendorMenuPage() {
       setLoading(true);
       setError("");
 
-      // apiGet uses the optimized apiClient which returns JSON directly
-      const data = await apiGet<any>("/api/vendor/menu/current");
+      // ✅ FIXED: removed <any>
+      const data = await apiGet("/api/vendor/menu/current");
 
       if (data && data.snapshotId) {
         setSnapshotId(data.snapshotId);
         setItems(data.items ?? []);
       }
     } catch (err: any) {
-      // 404 is a normal case (no draft exists yet)
       if (err.status !== 404) {
         setError(err?.message || "Failed to load current menu");
       }
@@ -46,7 +45,6 @@ export default function VendorMenuPage() {
 
   function handleUploaded(newSnapshotId: string) {
     setSnapshotId(newSnapshotId);
-    // Reload items from the server after upload to ensure sync
     loadCurrentDraft();
   }
 
@@ -69,7 +67,6 @@ export default function VendorMenuPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Uploader Section */}
           <div className="lg:col-span-1">
             <h2 className="text-sm font-semibold text-gray-500 uppercase mb-4 tracking-wider">
               1. Upload Menu File
@@ -77,7 +74,6 @@ export default function VendorMenuPage() {
             <MenuUpload onUploaded={handleUploaded} />
           </div>
 
-          {/* Editor Section */}
           <div className="lg:col-span-2">
             <h2 className="text-sm font-semibold text-gray-500 uppercase mb-4 tracking-wider">
               2. Review & Edit Items
