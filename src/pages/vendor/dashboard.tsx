@@ -49,9 +49,6 @@ export default function VendorDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  /* ============================================================
-     LOAD VENDOR + ANALYTICS
-  ============================================================ */
   useEffect(() => {
     let cancelled = false;
 
@@ -61,17 +58,20 @@ export default function VendorDashboardPage() {
         setError("");
 
         const [vendorRes, analyticsRes] = await Promise.all([
-          apiGet<VendorMe>("/api/vendor/me"),
-          apiGet<AnalyticsResponse>("/api/vendor/analytics/summary"),
+          apiGet("/api/vendor/me"),
+          apiGet("/api/vendor/analytics/summary"),
         ]);
 
         if (cancelled) return;
 
-        setVendor(vendorRes);
+        setVendor(vendorRes as VendorMe);
+
+        const analytics = analyticsRes as AnalyticsResponse;
+
         setSummary({
-          totalOrders: Number(analyticsRes.data.totalOrders ?? 0),
-          totalRevenue: Number(analyticsRes.data.totalRevenue ?? 0),
-          menuCount: Number(analyticsRes.data.menuCount ?? 0),
+          totalOrders: Number(analytics?.data?.totalOrders ?? 0),
+          totalRevenue: Number(analytics?.data?.totalRevenue ?? 0),
+          menuCount: Number(analytics?.data?.menuCount ?? 0),
         });
       } catch (err: any) {
         if (cancelled) return;
@@ -94,25 +94,9 @@ export default function VendorDashboardPage() {
     };
   }, [router]);
 
-  /* ============================================================
-     RENDER GUARDS
-  ============================================================ */
-
-  if (loading) {
-    return <div>Loading dashboard…</div>;
-  }
-
-  if (error) {
-    return <div className="text-red-600">{error}</div>;
-  }
-
-  if (!vendor) {
-    return null;
-  }
-
-  /* ============================================================
-     MAIN VIEW
-  ============================================================ */
+  if (loading) return <div>Loading dashboard…</div>;
+  if (error) return <div className="text-red-600">{error}</div>;
+  if (!vendor) return null;
 
   return (
     <VendorLayout
