@@ -1,6 +1,8 @@
+"use client";
+
 import { useState } from "react";
 import { useRouter } from "next/router";
-import { apiFetch } from "@/lib/apiClient";
+import { apiPost } from "@/lib/apiClient";
 
 type LoginResponse = {
   success: boolean;
@@ -25,24 +27,15 @@ export default function VendorLoginPage() {
     setLoading(true);
 
     try {
-      const res = await apiFetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
+      const data = await apiPost("/api/auth/login", {
+        email,
+        password,
       });
-
-      const data: LoginResponse = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || "Login failed");
-      }
 
       // ✅ Login success
       router.push("/vendor/dashboard");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+    } catch (err: any) {
+      setError(err?.message || "Login failed");
     } finally {
       setLoading(false);
     }
