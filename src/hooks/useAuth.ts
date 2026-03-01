@@ -7,20 +7,16 @@ export type AuthUser = {
 };
 
 export function useAuth() {
-  const [user, setUser] = useState<AuthUser | null>(
-    null
-  );
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
 
-    apiGet<{ user: AuthUser }>(
-      "/api/auth/current"
-    )
-      .then((data) => {
+    apiGet("/api/auth/current")
+      .then((data: any) => {
         if (!cancelled) {
-          setUser(data.user);
+          setUser(data?.user ?? null);
         }
       })
       .catch(() => {
