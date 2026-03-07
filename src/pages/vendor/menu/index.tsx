@@ -15,9 +15,9 @@ export default function VendorMenuPage() {
   async function loadCurrentDraft() {
     try {
       setLoading(true);
-      const data = await apiGet<any>("/api/vendor/menu/current");
 
-      // FIX: Safe check for data properties
+      const data = await apiGet("/api/vendor/menu/current");
+
       if (data && data.snapshotId) {
         setSnapshotId(data.snapshotId);
         setItems(data.items || []);
@@ -26,27 +26,52 @@ export default function VendorMenuPage() {
         setItems([]);
       }
     } catch (err: any) {
-      if (err.status !== 404) setError("Could not connect to server.");
+      console.error("Menu load failed:", err);
+
+      if (err?.status !== 404) {
+        setError("Could not connect to server.");
+      }
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => { loadCurrentDraft(); }, []);
+  useEffect(() => {
+    loadCurrentDraft();
+  }, []);
 
   return (
     <VendorLayout>
       <div className="p-6 space-y-6 max-w-5xl mx-auto">
         <h1 className="text-2xl font-bold">Menu Management</h1>
-        
+
+        {error && (
+          <div className="text-red-500 text-sm">
+            {error}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+          {/* Upload */}
           <div className="md:col-span-1">
-            <MenuUpload onUploaded={(id) => { setSnapshotId(id); loadCurrentDraft(); }} />
+            <MenuUpload
+              onUploaded={(id: string) => {
+                setSnapshotId(id);
+                loadCurrentDraft();
+              }}
+            />
           </div>
-          
+
+          {/* Menu Editor */}
           <div className="md:col-span-2">
-            {loading ? <p>Loading Menu...</p> : <MenuManager snapshotId={snapshotId} items={items} />}
+            {loading ? (
+              <p>Loading Menu...</p>
+            ) : (
+              <MenuManager snapshotId={snapshotId} items={items} />
+            )}
           </div>
+
         </div>
       </div>
     </VendorLayout>
