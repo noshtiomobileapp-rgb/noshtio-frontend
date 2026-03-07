@@ -12,24 +12,29 @@ export type MenuSnapshot = {
   status: "DRAFT";
 };
 
+/* ----------------------------------------
+   Get current vendor draft menu
+-----------------------------------------*/
 export async function getCurrentMenuSnapshot(): Promise<MenuSnapshot | null> {
-  const data = await apiClient("/api/menu/current");
+  const data = await apiClient("/api/vendor/menu/current");
 
-  if (!data?.snapshotId) {
+  if (!data || !data.snapshotId) {
     return null;
   }
 
   return {
     snapshotId: data.snapshotId,
-    items: data.items || [],
+    items: data.items ?? [],
     status: "DRAFT",
   };
 }
 
+/* ----------------------------------------
+   Upload menu file
+-----------------------------------------*/
 export async function uploadMenu(formData: FormData) {
-  return apiClient("/api/menu/upload", {
+  return apiClient("/api/vendor/menu/upload", {
     method: "POST",
     body: formData,
-    skipJson: true,
   });
 }
