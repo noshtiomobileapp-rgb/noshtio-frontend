@@ -1,47 +1,51 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  "https://noshtio-backend.onrender.com";
 
-export async function apiClient(path: string, options: any = {}) {
+type ApiOptions = {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: any;
+};
+
+export async function apiClient(path: string, options: ApiOptions = {}) {
   const isFormData = options.body instanceof FormData;
 
-  const token =
-    typeof window !== "undefined"
-      ? localStorage.getItem("token")
-      : null;
-
   const headers: Record<string, string> = {
-    ...options.headers,
+    ...(options.headers || {}),
   };
 
   if (!isFormData) {
     headers["Content-Type"] = "application/json";
   }
 
-  // ✅ Attach Authorization header automatically
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
   const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
+    method: options.method || "GET",
     headers,
+    body: options.body,
+    credentials: "include", // 🔑 REQUIRED for auth cookies
   });
 
   const text = await res.text();
-  if (!text || text.trim() === "") return {};
 
-  let data;
+  if (!text) return {};
+
+  let data: any;
+
   try {
     data = JSON.parse(text);
   } catch {
-    throw new Error("Invalid JSON response");
+    throw new Error("Invalid JSON response from API");
   }
 
   if (!res.ok) {
-    throw new Error(data.message || "Request failed");
+    throw new Error(data?.message || "API request failed");
   }
 
   return data;
 }
+
+/* ---------- Convenience helpers ---------- */
 
 export const apiGet = (path: string) =>
   apiClient(path, { method: "GET" });
@@ -50,4 +54,10 @@ export const apiPost = (path: string, body: any) =>
   apiClient(path, {
     method: "POST",
     body: JSON.stringify(body),
+  });
+
+export const apiUpload = (path: string, formData: FormData) =>
+  apiClient(path, {
+    method: "POST",
+    body: formData,
   });
