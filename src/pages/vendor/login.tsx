@@ -4,15 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import { apiPost } from "@/lib/apiClient";
 
-type LoginResponse = {
-  success: boolean;
-  message?: string;
-  user?: {
-    id: string;
-    email: string;
-  };
-};
-
 export default function VendorLoginPage() {
   const router = useRouter();
 
@@ -32,7 +23,14 @@ export default function VendorLoginPage() {
         password,
       });
 
-      // ✅ Login success
+      if (!data?.token) {
+        throw new Error("Invalid login response");
+      }
+
+      // ✅ Store JWT token
+      localStorage.setItem("token", data.token);
+
+      // ✅ Redirect to dashboard
       router.push("/vendor/dashboard");
     } catch (err: any) {
       setError(err?.message || "Login failed");

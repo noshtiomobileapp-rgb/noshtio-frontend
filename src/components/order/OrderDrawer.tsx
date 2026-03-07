@@ -52,7 +52,7 @@ export default function OrderDrawer({ orderId, onClose }: Props) {
                 <div>
                   <h3 className="font-medium mb-2">Items</h3>
                   <ul className="space-y-1">
-                    {order.items.map((i, idx) => (
+                    order.items.map((i: any, idx: number) => (
                       <li
                         key={idx}
                         className="flex justify-between"
