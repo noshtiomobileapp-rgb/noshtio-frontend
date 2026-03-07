@@ -1,74 +1,79 @@
-"use client";
+import { Router, Request, Response } from "express";
+import multer from "multer";
+import { VendorMenuDraft } from "../models/VendorMenuDraft.model";
+import { requireAuth } from "../middleware/requireAuth";
 
-import { useState } from "react";
-import { apiPost } from "@/lib/apiClient";
+type MenuUploadRequest = Request & {
+  user?: { id: string; role: string };
+  file?: Express.Multer.File;
+};
 
-export default function MenuUpload({
-  onUploaded,
-}: {
-  onUploaded: (snapshotId: string) => void;
-}) {
-  const [file, setFile] = useState<File | null>(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+const router = Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, 
+});
 
-  async function handleUpload(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
+/* ============================================================
+   GET /api/vendor/menu/current
+============================================================ */
+router.get("/current", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as MenuUploadRequest;
+    const vendorId = authReq.user?.id;
 
-    if (!file) {
-      setError("Please select a file first");
-      return;
+    if (!vendorId) return res.status(401).json({ message: "Unauthorized" });
+
+    const draft = await VendorMenuDraft.findOne({ vendorId, status: "DRAFT" });
+
+    // FIX: Return an empty structure instead of null to prevent frontend crashes
+    if (!draft) {
+      return res.status(200).json({ snapshotId: null, items: [], status: "NONE" });
     }
 
-    try {
-      setLoading(true);
-      const formData = new FormData();
-
-      // Must match backend multer.single("file")
-      formData.append("file", file);
-
-      // ❌ Removed <any> generic (this caused Render build failure)
-      const res = await apiPost("/api/vendor/menu/upload", formData);
-
-      if (res && res.snapshotId) {
-        onUploaded(res.snapshotId);
-        setFile(null);
-      } else {
-        throw new Error("Invalid response from server");
-      }
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Failed to upload menu");
-    } finally {
-      setLoading(false);
-    }
+    return res.status(200).json({
+      snapshotId: draft._id.toString(),
+      items: draft.items,
+      status: draft.status,
+    });
+  } catch (err) {
+    console.error("GET /current failed", err);
+    return res.status(500).json({ message: "Server Error" });
   }
+});
 
-  return (
-    <div className="bg-white p-4 rounded-lg border border-gray-200">
-      <form onSubmit={handleUpload} className="space-y-4">
-        <label className="block text-sm font-medium text-gray-700">
-          Upload Menu (.txt, .csv, image, or pdf)
-        </label>
+/* ============================================================
+   POST /api/vendor/menu/upload
+============================================================ */
+router.post("/upload", requireAuth, upload.single("file"), async (req: Request, res: Response) => {
+  try {
+    const authReq = req as MenuUploadRequest;
+    const vendorId = authReq.user?.id;
 
-        <input
-          type="file"
-          accept=".txt,.csv,image/*,application/pdf"
-          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-        />
+    if (!vendorId || !authReq.file) {
+      return res.status(400).json({ success: false, message: "Missing file or auth" });
+    }
 
-        {error && <p className="text-red-600 text-xs">{error}</p>}
+    const text = authReq.file.buffer.toString("utf-8");
+    const items = text.split("\n").map(l => l.trim()).filter(Boolean).map(name => ({
+      name,
+      price: null,
+    }));
 
-        <button
-          type="submit"
-          disabled={loading || !file}
-          className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
-        >
-          {loading ? "Processing..." : "Upload Menu"}
-        </button>
-      </form>
-    </div>
-  );
-}
+    const draft = await VendorMenuDraft.findOneAndUpdate(
+      { vendorId },
+      { vendorId, items, status: "DRAFT" },
+      { upsert: true, new: true }
+    );
+
+    return res.status(200).json({
+      success: true,
+      snapshotId: draft!._id.toString(),
+      items: draft!.items,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false });
+  }
+});
+
+export default router;
