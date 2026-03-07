@@ -14,6 +14,7 @@ export default function VendorLoginPage() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
     setError(null);
     setLoading(true);
 
@@ -23,15 +24,19 @@ export default function VendorLoginPage() {
         password,
       });
 
-      if (!data?.token) {
-        throw new Error("Invalid login response");
+      console.log("Login response:", data);
+
+      // Accept success response from backend
+      if (!data?.success) {
+        throw new Error(data?.message || "Login failed");
       }
 
-      // ✅ Store JWT token
-      localStorage.setItem("token", data.token);
+      // Optional: store email for session
+      localStorage.setItem("vendorEmail", email);
 
-      // ✅ Redirect to dashboard
+      // Redirect to dashboard
       router.push("/vendor/dashboard");
+
     } catch (err: any) {
       setError(err?.message || "Login failed");
     } finally {
@@ -64,7 +69,7 @@ export default function VendorLoginPage() {
 
         {error && <p style={{ color: "red" }}>{error}</p>}
 
-        <button type="submit" disabled={loading}>
+        <button type="submit" disabled={loading} style={{ width: "100%" }}>
           {loading ? "Logging in..." : "Login"}
         </button>
       </form>
