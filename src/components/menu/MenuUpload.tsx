@@ -1,79 +1,66 @@
-import { Router, Request, Response } from "express";
-import multer from "multer";
-import { VendorMenuDraft } from "../models/VendorMenuDraft.model";
-import { requireAuth } from "../middleware/requireAuth";
+"use client";
 
-type MenuUploadRequest = Request & {
-  user?: { id: string; role: string };
-  file?: Express.Multer.File;
-};
+import { useState } from "react";
 
-const router = Router();
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, 
-});
+export default function MenuUpload() {
+  const [file, setFile] = useState<File | null>(null);
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-/* ============================================================
-   GET /api/vendor/menu/current
-============================================================ */
-router.get("/current", requireAuth, async (req: Request, res: Response) => {
-  try {
-    const authReq = req as MenuUploadRequest;
-    const vendorId = authReq.user?.id;
-
-    if (!vendorId) return res.status(401).json({ message: "Unauthorized" });
-
-    const draft = await VendorMenuDraft.findOne({ vendorId, status: "DRAFT" });
-
-    // FIX: Return an empty structure instead of null to prevent frontend crashes
-    if (!draft) {
-      return res.status(200).json({ snapshotId: null, items: [], status: "NONE" });
+  async function handleUpload() {
+    if (!file) {
+      alert("Please select a file");
+      return;
     }
 
-    return res.status(200).json({
-      snapshotId: draft._id.toString(),
-      items: draft.items,
-      status: draft.status,
-    });
-  } catch (err) {
-    console.error("GET /current failed", err);
-    return res.status(500).json({ message: "Server Error" });
-  }
-});
+    const formData = new FormData();
+    formData.append("menu", file);
 
-/* ============================================================
-   POST /api/vendor/menu/upload
-============================================================ */
-router.post("/upload", requireAuth, upload.single("file"), async (req: Request, res: Response) => {
-  try {
-    const authReq = req as MenuUploadRequest;
-    const vendorId = authReq.user?.id;
+    setLoading(true);
 
-    if (!vendorId || !authReq.file) {
-      return res.status(400).json({ success: false, message: "Missing file or auth" });
+    try {
+      const res = await fetch(
+        "https://noshtio-backend.onrender.com/api/vendor/menu/upload",
+        {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        }
+      );
+
+      const data = await res.json();
+
+      if (data?.items) {
+        setItems(data.items);
+      } else {
+        alert("Upload failed");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Upload error");
     }
 
-    const text = authReq.file.buffer.toString("utf-8");
-    const items = text.split("\n").map(l => l.trim()).filter(Boolean).map(name => ({
-      name,
-      price: null,
-    }));
-
-    const draft = await VendorMenuDraft.findOneAndUpdate(
-      { vendorId },
-      { vendorId, items, status: "DRAFT" },
-      { upsert: true, new: true }
-    );
-
-    return res.status(200).json({
-      success: true,
-      snapshotId: draft!._id.toString(),
-      items: draft!.items,
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false });
+    setLoading(false);
   }
-});
 
-export default router;
+  return (
+    <div>
+      <h2>Upload Menu</h2>
+
+      <input
+        type="file"
+        onChange={(e) => setFile(e.target.files?.[0] || null)}
+      />
+
+      <button onClick={handleUpload} disabled={loading}>
+        {loading ? "Uploading..." : "Upload"}
+      </button>
+
+      <div style={{ marginTop: 20 }}>
+        {items.map((item, i) => (
+          <div key={i}>{item.name}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
