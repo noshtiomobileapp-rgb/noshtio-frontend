@@ -1,10 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  getVendorOrderById,
-  VendorOrder,
-} from "@/api/order.api";
+import { getVendorOrderById, VendorOrder } from "@/api/order.api";
 import OrderStatusActions from "./OrderStatusActions";
 
 type Props = {
@@ -20,8 +17,12 @@ export default function OrderDrawer({ orderId, onClose }: Props) {
     if (!orderId) return;
 
     setLoading(true);
+
     getVendorOrderById(orderId)
-      .then(setOrder)
+      .then((data) => setOrder(data))
+      .catch((err) => {
+        console.error("Failed to load order", err);
+      })
       .finally(() => setLoading(false));
   }, [orderId]);
 
@@ -30,32 +31,39 @@ export default function OrderDrawer({ orderId, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40">
       <div className="w-full sm:w-[420px] h-full bg-white flex flex-col shadow-xl">
+
         {/* Header */}
-        <div className="p-4 border-b flex justify-between">
+        <div className="p-4 border-b flex justify-between items-center">
           <div>
             <div className="text-xs text-gray-500">Order</div>
-            <div className="font-semibold">
-              #{orderId.slice(-6)}
-            </div>
+            <div className="font-semibold">#{orderId.slice(-6)}</div>
           </div>
-          <button onClick={onClose}>×</button>
+
+          <button
+            onClick={onClose}
+            className="text-lg font-semibold"
+          >
+            ×
+          </button>
         </div>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
           {loading && <div>Loading…</div>}
 
           {order && (
             <>
               {/* Items */}
-              {order.items && (
+              {order.items && order.items.length > 0 && (
                 <div>
                   <h3 className="font-medium mb-2">Items</h3>
+
                   <ul className="space-y-1">
-                    order.items.map((i: any, idx: number) => (
+                    {order.items.map((i: any, idx: number) => (
                       <li
                         key={idx}
-                        className="flex justify-between"
+                        className="flex justify-between text-sm"
                       >
                         <span>{i.name}</span>
                         <span>× {i.qty}</span>
@@ -76,10 +84,11 @@ export default function OrderDrawer({ orderId, onClose }: Props) {
               )}
 
               {/* Session / Table */}
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-600 space-y-1">
                 {order.sessionId && (
                   <div>Session: {order.sessionId}</div>
                 )}
+
                 {order.tableLabel && (
                   <div>Table: {order.tableLabel}</div>
                 )}
@@ -98,6 +107,7 @@ export default function OrderDrawer({ orderId, onClose }: Props) {
             />
           </div>
         )}
+
       </div>
     </div>
   );
