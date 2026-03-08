@@ -1,6 +1,14 @@
+/* ============================================================
+   API BASE
+============================================================ */
+
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   "https://noshtio-backend.onrender.com";
+
+/* ============================================================
+   TYPES
+============================================================ */
 
 type ApiOptions = {
   method?: string;
@@ -8,12 +16,35 @@ type ApiOptions = {
   body?: any;
 };
 
+/* ============================================================
+   TOKEN HELPER
+============================================================ */
+
+function getAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("token");
+}
+
+/* ============================================================
+   CORE API CLIENT
+============================================================ */
+
 export async function apiClient(path: string, options: ApiOptions = {}) {
   const isFormData = options.body instanceof FormData;
+
+  const token = getAuthToken();
 
   const headers: Record<string, string> = {
     ...(options.headers || {}),
   };
+
+  /* Attach Authorization header if token exists */
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  /* JSON content type for non-form requests */
 
   if (!isFormData) {
     headers["Content-Type"] = "application/json";
@@ -23,7 +54,7 @@ export async function apiClient(path: string, options: ApiOptions = {}) {
     method: options.method || "GET",
     headers,
     body: options.body,
-    credentials: "include", // 🔑 REQUIRED for auth cookies
+    credentials: "include",
   });
 
   const text = await res.text();
@@ -45,7 +76,9 @@ export async function apiClient(path: string, options: ApiOptions = {}) {
   return data;
 }
 
-/* ---------- Convenience helpers ---------- */
+/* ============================================================
+   CONVENIENCE HELPERS
+============================================================ */
 
 export const apiGet = (path: string) =>
   apiClient(path, { method: "GET" });
