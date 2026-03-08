@@ -1,10 +1,12 @@
-const BACKEND_URL = "http://localhost:4000";
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://noshtio-backend.onrender.com";
 
 export async function vendorFetch<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  // 🚫 Client-only guard
+
   if (typeof window === "undefined") {
     throw new Error("vendorFetch called on server");
   }
@@ -20,7 +22,6 @@ export async function vendorFetch<T>(
     },
   });
 
-  // 🔐 Auth failure — let caller decide redirect
   if (res.status === 401) {
     throw new Error("Unauthorized");
   }
