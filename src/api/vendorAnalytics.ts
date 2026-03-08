@@ -21,7 +21,7 @@ export type StatusWise = {
 };
 
 /* ============================================================
-   API FUNCTIONS (PURE, NO SIDE EFFECTS)
+   API FUNCTIONS
 ============================================================ */
 
 export function getSummary(range: 7 | 30) {
