@@ -2,13 +2,25 @@
 
 import { useState } from "react";
 import { useRouter } from "next/router";
+
 import { apiPost } from "@/lib/apiClient";
+
+type LoginResponse = {
+  success: boolean;
+  message?: string;
+  token?: string;
+  user?: {
+    id: string;
+    role: string;
+  };
+};
 
 export default function VendorLoginPage() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -19,10 +31,11 @@ export default function VendorLoginPage() {
     setLoading(true);
 
     try {
-      const data = await apiPost("/api/auth/login", {
+      const data = (await apiPost("/api/auth/login", {
         email,
         password,
-      });
+        role: "vendor",
+      })) as LoginResponse;
 
       console.log("Login response:", data);
 
@@ -30,16 +43,35 @@ export default function VendorLoginPage() {
         throw new Error(data?.message || "Login failed");
       }
 
-      // Save JWT token
-      if (data?.token) {
-        localStorage.setItem("token", data.token);
+      if (!data?.token) {
+        throw new Error("Authentication token missing");
       }
 
-      // Optional
+      /*
+      ============================================================
+      SAVE AUTH TOKEN
+      ============================================================
+      */
+
+      localStorage.setItem("token", data.token);
+
+      /*
+      Optional debugging / vendor info
+      */
+
       localStorage.setItem("vendorEmail", email);
 
-      // Redirect
-      router.push("/vendor/dashboard");
+      if (data?.user?.id) {
+        localStorage.setItem("vendorId", data.user.id);
+      }
+
+      /*
+      ============================================================
+      REDIRECT TO DASHBOARD
+      ============================================================
+      */
+
+      router.replace("/vendor/dashboard");
 
     } catch (err: any) {
       console.error("Login error:", err);
@@ -50,17 +82,33 @@ export default function VendorLoginPage() {
   }
 
   return (
-    <div style={{ maxWidth: 400, margin: "60px auto" }}>
-      <h1>Vendor Login</h1>
+    <div
+      style={{
+        maxWidth: 420,
+        margin: "80px auto",
+        padding: 24,
+        border: "1px solid #eee",
+        borderRadius: 8,
+        background: "#fff",
+      }}
+    >
+      <h1 style={{ marginBottom: 20 }}>Vendor Login</h1>
 
       <form onSubmit={handleSubmit}>
+
         <input
           type="email"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          style={{ width: "100%", marginBottom: 12 }}
+          style={{
+            width: "100%",
+            padding: 10,
+            marginBottom: 12,
+            border: "1px solid #ddd",
+            borderRadius: 4,
+          }}
         />
 
         <input
@@ -69,14 +117,37 @@ export default function VendorLoginPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          style={{ width: "100%", marginBottom: 12 }}
+          style={{
+            width: "100%",
+            padding: 10,
+            marginBottom: 12,
+            border: "1px solid #ddd",
+            borderRadius: 4,
+          }}
         />
 
-        {error && <p style={{ color: "red" }}>{error}</p>}
+        {error && (
+          <p style={{ color: "red", marginBottom: 12 }}>
+            {error}
+          </p>
+        )}
 
-        <button type="submit" disabled={loading} style={{ width: "100%" }}>
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            width: "100%",
+            padding: 12,
+            background: "#000",
+            color: "#fff",
+            border: "none",
+            borderRadius: 4,
+            cursor: "pointer",
+          }}
+        >
           {loading ? "Logging in..." : "Login"}
         </button>
+
       </form>
     </div>
   );
