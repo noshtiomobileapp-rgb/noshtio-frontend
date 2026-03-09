@@ -1,19 +1,12 @@
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://noshtio-backend.onrender.com";
+
 /*
 ============================================================
 Vendor API Fetch Wrapper
 ============================================================
-Handles:
-• Token injection
-• Standard headers
-• Error handling
-• JSON parsing
-• Unauthorized detection
-============================================================
 */
-
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://noshtio-backend.onrender.com";
 
 export async function vendorFetch<T = any>(
   path: string,
@@ -24,29 +17,33 @@ export async function vendorFetch<T = any>(
     throw new Error("vendorFetch should run in browser only");
   }
 
-  /* ============================================================
-     TOKEN
-  ============================================================ */
+  /*
+  ============================================================
+  GET TOKEN
+  ============================================================
+  */
 
   const token = localStorage.getItem("token");
 
-  /* ============================================================
-     HEADERS
-  ============================================================ */
+  /*
+  ============================================================
+  HEADERS
+  ============================================================
+  */
 
   const headers = new Headers(options.headers || {});
 
-  if (!headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
-  }
+  headers.set("Content-Type", "application/json");
 
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  /* ============================================================
-     REQUEST
-  ============================================================ */
+  /*
+  ============================================================
+  REQUEST
+  ============================================================
+  */
 
   const res = await fetch(`${BACKEND_URL}${path}`, {
     ...options,
@@ -54,40 +51,27 @@ export async function vendorFetch<T = any>(
     credentials: "include",
   });
 
-  /* ============================================================
-     UNAUTHORIZED
-  ============================================================ */
+  /*
+  ============================================================
+  UNAUTHORIZED
+  ============================================================
+  */
 
   if (res.status === 401) {
     console.error("Vendor API Unauthorized:", path);
-
     throw new Error("Unauthorized");
   }
 
-  /* ============================================================
-     ERROR HANDLING
-  ============================================================ */
+  /*
+  ============================================================
+  ERROR HANDLING
+  ============================================================
+  */
 
   if (!res.ok) {
-    let message = "Request failed";
-
-    try {
-      const data = await res.json();
-      message = data?.message || JSON.stringify(data);
-    } catch {
-      message = await res.text();
-    }
-
-    throw new Error(message || "Request failed");
+    const text = await res.text();
+    throw new Error(text || "Request failed");
   }
 
-  /* ============================================================
-     RESPONSE PARSE
-  ============================================================ */
-
-  try {
-    return await res.json();
-  } catch {
-    return {} as T;
-  }
+  return res.json();
 }
