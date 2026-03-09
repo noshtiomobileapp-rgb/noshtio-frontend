@@ -19,6 +19,11 @@ export default function VendorLoginPage() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
+    if (!email || !password) {
+      setError("Email and password are required");
+      return;
+    }
+
     setError(null);
     setLoading(true);
 
@@ -49,7 +54,17 @@ export default function VendorLoginPage() {
 
       /*
       ==============================================
-      SAVE TOKEN
+      RESET OLD AUTH STATE
+      ==============================================
+      */
+
+      localStorage.removeItem("token");
+      localStorage.removeItem("vendorId");
+      localStorage.removeItem("vendorEmail");
+
+      /*
+      ==============================================
+      SAVE NEW TOKEN
       ==============================================
       */
 
@@ -63,15 +78,31 @@ export default function VendorLoginPage() {
 
       /*
       ==============================================
-      REDIRECT
+      VERIFY TOKEN SAVED
       ==============================================
       */
 
-      router.replace("/vendor/dashboard");
+      const savedToken = localStorage.getItem("token");
+
+      console.log("Saved token:", savedToken);
+
+      if (!savedToken) {
+        throw new Error("Token failed to store in browser");
+      }
+
+      /*
+      ==============================================
+      SMALL DELAY (ensures storage commit)
+      ==============================================
+      */
+
+      setTimeout(() => {
+        router.replace("/vendor/dashboard");
+      }, 150);
 
     } catch (err: any) {
       console.error("Login error:", err);
-      setError(err.message || "Login failed");
+      setError(err?.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -137,7 +168,8 @@ export default function VendorLoginPage() {
             color: "#fff",
             border: "none",
             borderRadius: 4,
-            cursor: "pointer",
+            cursor: loading ? "not-allowed" : "pointer",
+            opacity: loading ? 0.7 : 1,
           }}
         >
           {loading ? "Logging in..." : "Login"}
