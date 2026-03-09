@@ -4,7 +4,7 @@ const BACKEND_URL =
 
 /*
 ============================================================
-   Vendor API Fetch Wrapper
+Vendor API Fetch Wrapper
 ============================================================
 */
 
@@ -19,13 +19,13 @@ export async function vendorFetch<T = any>(
 
   const token = localStorage.getItem("token");
 
-  const headers: HeadersInit = {
+  const headers = new Headers({
     "Content-Type": "application/json",
-    ...(options.headers || {})
-  };
+    ...(options.headers || {}),
+  });
 
   if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+    headers.set("Authorization", `Bearer ${token}`);
   }
 
   const res = await fetch(`${BACKEND_URL}${path}`, {
@@ -35,7 +35,6 @@ export async function vendorFetch<T = any>(
   });
 
   if (res.status === 401) {
-    console.warn("Unauthorized request");
     throw new Error("Unauthorized");
   }
 
