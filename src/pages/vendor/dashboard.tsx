@@ -39,6 +39,7 @@ export default function VendorDashboardPage() {
   const router = useRouter();
 
   const [vendor, setVendor] = useState<VendorMe | null>(null);
+
   const [summary, setSummary] = useState<AnalyticsSummary>({
     totalOrders: 0,
     totalRevenue: 0,
@@ -49,6 +50,19 @@ export default function VendorDashboardPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const token = localStorage.getItem("token");
+
+    /* ============================================================
+       PROTECT ROUTE
+    ============================================================ */
+
+    if (!token) {
+      router.replace("/vendor/login");
+      return;
+    }
+
     let cancelled = false;
 
     async function loadDashboard() {
@@ -63,6 +77,10 @@ export default function VendorDashboardPage() {
 
         if (cancelled) return;
 
+        if (!vendorRes) {
+          throw new Error("Vendor not found");
+        }
+
         setVendor(vendorRes);
 
         setSummary({
@@ -70,17 +88,20 @@ export default function VendorDashboardPage() {
           totalRevenue: Number(analyticsRes?.data?.totalRevenue ?? 0),
           menuCount: Number(analyticsRes?.data?.menuCount ?? 0),
         });
+
       } catch (err: any) {
         if (cancelled) return;
 
         console.error("Dashboard load error:", err);
 
         if (err?.message === "Unauthorized") {
+          localStorage.removeItem("token");
           router.replace("/vendor/login");
           return;
         }
 
         setError("Failed to load dashboard");
+
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -92,6 +113,10 @@ export default function VendorDashboardPage() {
       cancelled = true;
     };
   }, [router]);
+
+  /* ============================================================
+     UI STATES
+  ============================================================ */
 
   if (loading) {
     return (
@@ -110,6 +135,10 @@ export default function VendorDashboardPage() {
   }
 
   if (!vendor) return null;
+
+  /* ============================================================
+     PAGE
+  ============================================================ */
 
   return (
     <VendorLayout
