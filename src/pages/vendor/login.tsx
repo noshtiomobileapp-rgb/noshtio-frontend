@@ -3,17 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 
-import { apiPost } from "@/lib/apiClient";
-
-type LoginResponse = {
-  success: boolean;
-  message?: string;
-  token?: string;
-  user?: {
-    id: string;
-    role: string;
-  };
-};
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://noshtio-backend.onrender.com";
 
 export default function VendorLoginPage() {
   const router = useRouter();
@@ -31,51 +23,55 @@ export default function VendorLoginPage() {
     setLoading(true);
 
     try {
-      const data = (await apiPost("/api/auth/login", {
-        email,
-        password,
-        role: "vendor",
-      })) as LoginResponse;
+      const res = await fetch(`${API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          role: "vendor",
+        }),
+      });
+
+      const data = await res.json();
 
       console.log("Login response:", data);
 
-      if (!data?.success) {
+      if (!res.ok) {
         throw new Error(data?.message || "Login failed");
       }
 
       if (!data?.token) {
-        throw new Error("Authentication token missing");
+        throw new Error("Token missing from server response");
       }
 
       /*
-      ============================================================
-      SAVE AUTH TOKEN
-      ============================================================
+      ==============================================
+      SAVE TOKEN
+      ==============================================
       */
 
       localStorage.setItem("token", data.token);
-
-      /*
-      Optional debugging / vendor info
-      */
-
-      localStorage.setItem("vendorEmail", email);
 
       if (data?.user?.id) {
         localStorage.setItem("vendorId", data.user.id);
       }
 
+      localStorage.setItem("vendorEmail", email);
+
       /*
-      ============================================================
-      REDIRECT TO DASHBOARD
-      ============================================================
+      ==============================================
+      REDIRECT
+      ==============================================
       */
 
       router.replace("/vendor/dashboard");
 
     } catch (err: any) {
       console.error("Login error:", err);
-      setError(err?.message || "Login failed");
+      setError(err.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -95,7 +91,6 @@ export default function VendorLoginPage() {
       <h1 style={{ marginBottom: 20 }}>Vendor Login</h1>
 
       <form onSubmit={handleSubmit}>
-
         <input
           type="email"
           placeholder="Email"
@@ -147,7 +142,6 @@ export default function VendorLoginPage() {
         >
           {loading ? "Logging in..." : "Login"}
         </button>
-
       </form>
     </div>
   );
