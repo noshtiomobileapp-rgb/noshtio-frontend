@@ -6,16 +6,14 @@ import { useRouter } from "next/router";
 import VendorLayout from "@/components/vendor/VendorLayout";
 import DashboardKpis from "@/components/vendor/dashboard/DashboardKpis";
 
-import { apiGet } from "@/lib/apiClient";
+import { vendorFetch } from "@/lib/vendorApi";
 
 /* ============================================================
    TYPES — API RESPONSES
 ============================================================ */
 
 type VendorMe = {
-  _id: string;
-  name: string;
-  email: string;
+  vendorId: string;
   role: "vendor";
 };
 
@@ -34,7 +32,7 @@ type AnalyticsSummary = {
 };
 
 /* ============================================================
-   PAGE — VENDOR DASHBOARD (COOKIE AUTH · SAFE)
+   PAGE — VENDOR DASHBOARD
 ============================================================ */
 
 export default function VendorDashboardPage() {
@@ -46,6 +44,7 @@ export default function VendorDashboardPage() {
     totalRevenue: 0,
     menuCount: 0,
   });
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -58,25 +57,25 @@ export default function VendorDashboardPage() {
         setError("");
 
         const [vendorRes, analyticsRes] = await Promise.all([
-          apiGet("/api/vendor/me"),
-          apiGet("/api/vendor/analytics/summary"),
+          vendorFetch<VendorMe>("/api/vendor/me"),
+          vendorFetch<AnalyticsResponse>("/api/vendor/analytics/summary"),
         ]);
 
         if (cancelled) return;
 
-        setVendor(vendorRes as VendorMe);
-
-        const analytics = analyticsRes as AnalyticsResponse;
+        setVendor(vendorRes);
 
         setSummary({
-          totalOrders: Number(analytics?.data?.totalOrders ?? 0),
-          totalRevenue: Number(analytics?.data?.totalRevenue ?? 0),
-          menuCount: Number(analytics?.data?.menuCount ?? 0),
+          totalOrders: Number(analyticsRes?.data?.totalOrders ?? 0),
+          totalRevenue: Number(analyticsRes?.data?.totalRevenue ?? 0),
+          menuCount: Number(analyticsRes?.data?.menuCount ?? 0),
         });
       } catch (err: any) {
         if (cancelled) return;
 
-        if (err?.status === 401) {
+        console.error("Dashboard load error:", err);
+
+        if (err?.message === "Unauthorized") {
           router.replace("/vendor/login");
           return;
         }
@@ -94,8 +93,22 @@ export default function VendorDashboardPage() {
     };
   }, [router]);
 
-  if (loading) return <div>Loading dashboard…</div>;
-  if (error) return <div className="text-red-600">{error}</div>;
+  if (loading) {
+    return (
+      <div className="p-6 text-gray-600">
+        Loading dashboard…
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 text-red-600">
+        {error}
+      </div>
+    );
+  }
+
   if (!vendor) return null;
 
   return (
