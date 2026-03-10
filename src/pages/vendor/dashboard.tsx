@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 
 import VendorLayout from "@/components/vendor/VendorLayout";
@@ -49,13 +49,19 @@ export default function VendorDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  /* prevents double fetch in React strict mode */
+  const loadedRef = useRef(false);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (loadedRef.current) return;
+
+    loadedRef.current = true;
 
     const token = localStorage.getItem("token");
 
     /* ============================================================
-       PROTECT ROUTE
+       AUTH GUARD
     ============================================================ */
 
     if (!token) {
@@ -69,6 +75,10 @@ export default function VendorDashboardPage() {
       try {
         setLoading(true);
         setError("");
+
+        /* ============================================================
+           FETCH DASHBOARD DATA
+        ============================================================ */
 
         const [vendorRes, analyticsRes] = await Promise.all([
           vendorFetch<VendorMe>("/api/vendor/me"),
@@ -94,8 +104,15 @@ export default function VendorDashboardPage() {
 
         console.error("Dashboard load error:", err);
 
+        /* ============================================================
+           HANDLE UNAUTHORIZED
+        ============================================================ */
+
         if (err?.message === "Unauthorized") {
           localStorage.removeItem("token");
+          localStorage.removeItem("vendorId");
+          localStorage.removeItem("vendorEmail");
+
           router.replace("/vendor/login");
           return;
         }
@@ -112,6 +129,7 @@ export default function VendorDashboardPage() {
     return () => {
       cancelled = true;
     };
+
   }, [router]);
 
   /* ============================================================
